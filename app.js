@@ -215,9 +215,11 @@ setTargetBtn.addEventListener('click', async () => {
       if (!res.success) { showAlert('Could not get tabs. Try again.'); return; }
 
       const pageUrl = window.location.href;
-      const candidates = res.tabs.filter(t =>
-        t.url &&
-        !t.url.includes(pageUrl.split('/').slice(0, 3).join('/')) &&
+    const candidates = res.tabs.filter(t =>
+      t.url &&
+      !t.url.includes('https://lexydu.github.io/Dictation-Typer-Extention-Popup-Online-Quillbot-Grammarly-Version-1.6') &&
+      !t.url.startsWith('chrome://') &&
+      !t.url.startsWith('chrome-extension://') &&
         !t.url.startsWith('chrome://') &&
         !t.url.startsWith('chrome-extension://')
       );
