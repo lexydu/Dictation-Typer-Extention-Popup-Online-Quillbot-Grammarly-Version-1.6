@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dictation Typer — Writing Page</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="pageAlert"></div>
+
+  <div class="page-wrapper">
+
+    <!-- ===== HEADER ===== -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-dot"></div>
+        <div>
+          <h1>Dictation Typer <span class="header-sub">Writing Page</span></h1>
+          <div class="ext-status" id="extStatus">🔌 Connecting to extension...</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="statusPill" class="status-pill">Ready</div>
+      </div>
+    </header>
+
+    <!-- ===== NOT CONNECTED BANNER ===== -->
+    <div id="notConnectedBanner" class="banner banner-warn" style="display:none;">
+      ⚠️ Extension not detected. Make sure the Dictation Typer extension is installed and enabled in Chrome, then refresh this page.
+    </div>
+
+    <!-- ===== MAIN LAYOUT ===== -->
+    <div class="main-layout">
+
+      <!-- ===== LEFT: WRITING AREA ===== -->
+      <div class="writing-panel">
+
+        <!-- Tab Lock -->
+        <div class="target-row" id="targetRow">
+          <div class="target-row-top">
+            <div id="targetLabel" class="target-label">No tab locked — click "🎯 Lock to Tab" to set your platform tab</div>
+            <button id="setTargetBtn" class="set-target-btn">🎯 Lock to Tab</button>
+          </div>
+          <div class="target-instructions">
+            <strong>How to lock:</strong> Click "🎯 Lock to Tab" → switch to your platform tab within 5 seconds → locks automatically. Never changes until you click again.
+          </div>
+        </div>
+
+        <div class="panel-label">Your Message</div>
+        <textarea
+          id="mainText"
+          placeholder="Write your message here. Quillbot and Grammarly both work on this page — polish your text freely, then click Start Typing."
+        ></textarea>
+
+        <div class="textarea-footer">
+          <span id="charCounter" class="char-counter">0 / 200</span>
+          <button id="clearTextBtn" class="link-btn">Clear text</button>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-row">
+          <div class="control-group">
+            <label class="control-label" for="speedSelect">Typing Speed</label>
+            <select id="speedSelect" class="select-input">
+              <option value="superfast" selected>Super Fast</option>
+              <option value="fast">Fast</option>
+              <option value="normal">Normal</option>
+              <option value="slow">Slow</option>
+            </select>
+          </div>
+          <div class="control-group check-group">
+            <label class="checkbox-label">
+              <input id="appendMode" type="checkbox">
+              <span>Append instead of overwrite</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-row">
+          <button id="startBtn" class="btn btn-start" disabled>▶ Start Typing</button>
+          <button id="stopBtn" class="btn btn-stop" disabled>■ Stop Typing</button>
+        </div>
+
+        <div id="typingIndicator" class="typing-indicator" style="display:none;">Typing...</div>
+
+        <!-- Counter -->
+        <div class="counter-row">
+          <div id="messageCounter" class="message-counter">Messages Sent: 0</div>
+          <div class="counter-btns">
+            <button id="increaseBtn" class="count-btn">+</button>
+            <button id="decreaseBtn" class="count-btn">−</button>
+            <button id="resetBtn" class="count-btn count-reset">Reset</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT: SIDEBAR ===== -->
+      <div class="sidebar">
+
+        <!-- TEXT RULES -->
+        <div class="sidebar-card">
+          <div class="card-header">
+            <span class="card-title">Text Rules</span>
+            <button class="toggle-btn" id="toggleRules">▼</button>
+          </div>
+          <div id="rulesSection">
+            <div class="builtin-rules">
+              <div class="rule-row rule-locked">🔒 Must contain a question mark (?)</div>
+              <div class="rule-row rule-locked">🔒 Must be at least 150 characters</div>
+              <div class="rule-row rule-locked">🔒 Banned phrase: "my dick"</div>
+            </div>
+            <div id="customRulesList"></div>
+            <div class="rule-add-row">
+              <input id="newRuleInput" type="text" placeholder="Add a banned phrase..." maxlength="100" class="rule-input" />
+              <button id="addRuleBtn" class="rule-add-btn">Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE LOG -->
+        <div class="sidebar-card">
+          <div class="card-header">
+            <span class="card-title">Message Log</span>
+            <button class="toggle-btn" id="toggleLog">▼</button>
+          </div>
+          <div id="logSection">
+            <div id="logList" class="log-list"></div>
+            <div class="log-actions">
+              <button id="exportLogBtn" class="log-btn">⬇ Export .txt</button>
+              <button id="clearLogBtn" class="log-btn log-clear">🗑 Clear Log</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
