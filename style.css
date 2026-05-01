@@ -322,3 +322,46 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 @media (max-width: 800px) {
   .main-layout { grid-template-columns: 1fr; }
 }
+.textarea-wrap { position: relative; }
+
+.emoji-btn {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: #f4f6f8;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.emoji-btn:hover { background: #e9ecef; }
+
+.emoji-panel {
+  position: absolute;
+  left: 10px;
+  bottom: 48px;
+  background: white;
+  border: 1px solid #e0e4e8;
+  border-radius: 8px;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  z-index: 10;
+}
+
+.emoji-item {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.emoji-item:hover { background: #f4f6f8; border-radius: 4px; }
+
+/* Prevent overlap with emoji button */
+textarea { padding: 16px 16px 42px 44px; }
