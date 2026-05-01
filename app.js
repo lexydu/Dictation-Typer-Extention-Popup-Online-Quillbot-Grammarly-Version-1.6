@@ -41,6 +41,8 @@ const exportLogBtn     = document.getElementById('exportLogBtn');
 const clearLogBtn      = document.getElementById('clearLogBtn');
 const extStatusEl      = document.getElementById('extStatus');
 const notConnectedBanner = document.getElementById('notConnectedBanner');
+const emojiBtn = document.getElementById('emojiBtn');
+const emojiPanel = document.getElementById('emojiPanel');
 
 let extensionConnected = false;
 let lastTypedText = '';
@@ -439,6 +441,7 @@ function renderCustomRules(rules) {
     customRulesListEl.appendChild(div);
   });
 }
+
 async function removeCustomRule(index) {
   const res = await sendToExtension('storageGet', { keys: [STORAGE_RULES_KEY] });
   const rules = (res.success && res.data && res.data[STORAGE_RULES_KEY]) || [];
@@ -447,11 +450,13 @@ async function removeCustomRule(index) {
   renderCustomRules(rules);
   showAlert('✔️ Rule removed.');
 }
+
 toggleRulesBtn.addEventListener('click', () => {
   const h = rulesSectionEl.style.display === 'none';
   rulesSectionEl.style.display = h ? 'block' : 'none';
   toggleRulesBtn.textContent = h ? '▲' : '▼';
 });
+
 addRuleBtnEl.addEventListener('click', async () => {
   const phrase = newRuleInputEl.value.trim();
   if (!phrase) { showAlert('Enter a phrase to ban.'); return; }
@@ -464,7 +469,36 @@ addRuleBtnEl.addEventListener('click', async () => {
   newRuleInputEl.value = '';
   showAlert('✔️ Banned: "' + phrase + '"');
 });
+
 newRuleInputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addRuleBtnEl.click(); });
 
-// Also update popup button to open this page
+// ===== Emoji Picker =====
+function insertAtCursor(el, text) {
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? el.value.length;
+  el.value = el.value.slice(0, start) + text + el.value.slice(end);
+  const pos = start + text.length;
+  el.setSelectionRange(pos, pos);
+}
+
+emojiBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  emojiPanel.style.display = (emojiPanel.style.display === 'none') ? 'grid' : 'none';
+});
+
+emojiPanel.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('emoji-item')) return;
+  insertAtCursor(mainTextEl, e.target.textContent);
+  updateCharCounter();
+  sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
+  emojiPanel.style.display = 'none';
+  mainTextEl.focus();
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target !== emojiBtn && !emojiPanel.contains(e.target)) {
+    emojiPanel.style.display = 'none';
+  }
+});
+
 updateCharCounter();
