@@ -488,12 +488,26 @@ emojiBtn.addEventListener('click', (e) => {
 
 emojiPanel.addEventListener('click', (e) => {
   if (!e.target.classList.contains('emoji-item')) return;
-  insertAtCursor(mainTextEl, e.target.textContent);
+
+  const emoji = e.target.textContent;
+  const start = mainTextEl.selectionStart ?? mainTextEl.value.length;
+  const end = mainTextEl.selectionEnd ?? mainTextEl.value.length;
+
+  const before = mainTextEl.value[start - 1] || '';
+  const after = mainTextEl.value[end] || '';
+
+  const needsSpaceBefore = before && !/\s/.test(before);
+  const needsSpaceAfter = after && !/\s/.test(after);
+
+  const insertText = (needsSpaceBefore ? ' ' : '') + emoji + (needsSpaceAfter ? ' ' : '');
+
+  insertAtCursor(mainTextEl, insertText);
   updateCharCounter();
   sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
   emojiPanel.style.display = 'none';
   mainTextEl.focus();
 });
+
 
 document.addEventListener('click', (e) => {
   if (e.target !== emojiBtn && !emojiPanel.contains(e.target)) {
