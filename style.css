@@ -252,6 +252,21 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 }
 .message-counter { font-size: 13px; font-weight: 600; color: #007946; }
 .counter-btns { display: flex; gap: 6px; }
+.count-input {
+  width: 72px;
+  height: 34px;
+  border: 1.5px solid #e0e4e8;
+  border-radius: 8px;
+  background: white;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+.count-input:focus {
+  outline: none;
+  border-color: #007946;
+}
 .count-btn {
   width: 34px; height: 34px;
   border: 1.5px solid #e0e4e8;
