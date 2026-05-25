@@ -27,6 +27,7 @@ const increaseBtn      = document.getElementById('increaseBtn');
 const decreaseBtn      = document.getElementById('decreaseBtn');
 const resetBtn         = document.getElementById('resetBtn');
 const clearTextBtn     = document.getElementById('clearTextBtn');
+const mainTextHighlightsEl = document.getElementById('mainTextHighlights');
 const writingIssuesEl  = document.getElementById('writingIssues');
 const writingIssuesTitleEl = writingIssuesEl.querySelector('.writing-issues-title');
 const writingIssuesListEl = document.getElementById('writingIssuesList');
@@ -156,57 +157,145 @@ function hasQuestionShape(sentence) {
   return /^(who|what|when|where|why|how|can|could|would|should|will|do|does|did|is|are|am|was|were|have|has|had)\b/i.test(sentence.trim());
 }
 
-function getWritingIssues(text) {
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function getLastWordRange(text, start, end) {
+  const segment = text.slice(start, end);
+  const match = segment.match(/\S+\s*$/);
+  if (!match) return { start, end };
+
+  const rangeStart = start + match.index;
+  return {
+    start: rangeStart,
+    end: rangeStart + match[0].trimEnd().length
+  };
+}
+
+function getWritingIssueDetails(text) {
   const issues = [];
+  const ranges = [];
   const trimmed = text.trim();
 
-  if (!trimmed) return issues;
+  if (!trimmed) return { issues, ranges };
 
-  if (/\bi\b/.test(text)) {
-    issues.push('Use uppercase "I" when referring to yourself.');
+  function addIssue(label, start, end) {
+    issues.push(label);
+    if (Number.isInteger(start) && Number.isInteger(end) && end > start) {
+      ranges.push({ start, end });
+    }
   }
 
-  if (/\s{2,}/.test(text)) {
-    issues.push('Remove extra spaces.');
+  const lowerIRegex = /\bi\b/g;
+  let lowerIMatch;
+  while ((lowerIMatch = lowerIRegex.exec(text)) !== null) {
+    addIssue('Use uppercase "I" when referring to yourself.', lowerIMatch.index, lowerIMatch.index + lowerIMatch[0].length);
+  }
+
+  const extraSpaceRegex = /\s{2,}/g;
+  let extraSpaceMatch;
+  while ((extraSpaceMatch = extraSpaceRegex.exec(text)) !== null) {
+    addIssue('Remove extra spaces.', extraSpaceMatch.index, extraSpaceMatch.index + extraSpaceMatch[0].length);
   }
 
   const commonFixes = [
-    { pattern: /\bdont\b/i, label: 'Check "dont" - did you mean "don\'t"?' },
-    { pattern: /\bcant\b/i, label: 'Check "cant" - did you mean "can\'t"?' },
-    { pattern: /\bwont\b/i, label: 'Check "wont" - did you mean "won\'t"?' },
-    { pattern: /\bim\b/i, label: 'Check "im" - did you mean "I\'m"?' },
-    { pattern: /\bive\b/i, label: 'Check "ive" - did you mean "I\'ve"?' },
-    { pattern: /\bill\b/i, label: 'Check "ill" - did you mean "I\'ll"?' },
-    { pattern: /\byoure\b/i, label: 'Check "youre" - did you mean "you\'re"?' },
-    { pattern: /\bthats\b/i, label: 'Check "thats" - did you mean "that\'s"?' }
+    { pattern: /\bdont\b/gi, label: 'Check "dont" - did you mean "don\'t"?' },
+    { pattern: /\bcant\b/gi, label: 'Check "cant" - did you mean "can\'t"?' },
+    { pattern: /\bwont\b/gi, label: 'Check "wont" - did you mean "won\'t"?' },
+    { pattern: /\bim\b/gi, label: 'Check "im" - did you mean "I\'m"?' },
+    { pattern: /\bive\b/gi, label: 'Check "ive" - did you mean "I\'ve"?' },
+    { pattern: /\bill\b/gi, label: 'Check "ill" - did you mean "I\'ll"?' },
+    { pattern: /\byoure\b/gi, label: 'Check "youre" - did you mean "you\'re"?' },
+    { pattern: /\bthats\b/gi, label: 'Check "thats" - did you mean "that\'s"?' }
   ];
 
   commonFixes.forEach(item => {
-    if (item.pattern.test(text)) issues.push(item.label);
-  });
-
-  const sentences = trimmed.match(/[^.!?]+[.!?]?/g) || [trimmed];
-  sentences.forEach(rawSentence => {
-    const sentence = rawSentence.trim();
-    if (!sentence) return;
-
-    const endsWithPunctuation = /[.!?]$/.test(sentence);
-    if (!endsWithPunctuation) {
-      if (hasQuestionShape(sentence)) {
-        issues.push('This looks like a question and may need a question mark.');
-      } else {
-        issues.push('This sentence may need final punctuation.');
-      }
-    } else if (hasQuestionShape(sentence) && !/\?$/.test(sentence)) {
-      issues.push('This looks like a question but does not end with a question mark.');
+    let match;
+    while ((match = item.pattern.exec(text)) !== null) {
+      addIssue(item.label, match.index, match.index + match[0].length);
     }
   });
 
-  return Array.from(new Set(issues));
+  const sentenceRegex = /[^.!?]+[.!?]?/g;
+  let sentenceMatch;
+  while ((sentenceMatch = sentenceRegex.exec(text)) !== null) {
+    const rawSentence = sentenceMatch[0];
+    const leadingSpaces = rawSentence.length - rawSentence.trimStart().length;
+    const sentence = rawSentence.trim();
+    if (!sentence) continue;
+
+    const sentenceStart = sentenceMatch.index + leadingSpaces;
+    const sentenceEnd = sentenceStart + sentence.length;
+    const lastWordRange = getLastWordRange(text, sentenceStart, sentenceEnd);
+    const endsWithPunctuation = /[.!?]$/.test(sentence);
+
+    if (!endsWithPunctuation) {
+      if (hasQuestionShape(sentence)) {
+        addIssue('This looks like a question and may need a question mark.', lastWordRange.start, lastWordRange.end);
+      } else {
+        addIssue('This sentence may need final punctuation.', lastWordRange.start, lastWordRange.end);
+      }
+    } else if (hasQuestionShape(sentence) && !/\?$/.test(sentence)) {
+      addIssue('This looks like a question but does not end with a question mark.', lastWordRange.start, lastWordRange.end);
+    }
+  }
+
+  return { issues: Array.from(new Set(issues)), ranges };
+}
+
+function getWritingIssues(text) {
+  return getWritingIssueDetails(text).issues;
+}
+
+function renderIssueUnderlines(ranges) {
+  const text = mainTextEl.value;
+
+  if (!text || !ranges.length) {
+    mainTextHighlightsEl.innerHTML = escapeHtml(text);
+    syncHighlightLayer();
+    return;
+  }
+
+  const sortedRanges = ranges
+    .slice()
+    .sort((a, b) => a.start - b.start)
+    .reduce((merged, range) => {
+      const last = merged[merged.length - 1];
+      if (last && range.start <= last.end) {
+        last.end = Math.max(last.end, range.end);
+      } else {
+        merged.push({ start: range.start, end: range.end });
+      }
+      return merged;
+    }, []);
+
+  let html = '';
+  let cursor = 0;
+
+  sortedRanges.forEach(range => {
+    html += escapeHtml(text.slice(cursor, range.start));
+    html += '<span class="issue-underline">' + escapeHtml(text.slice(range.start, range.end)) + '</span>';
+    cursor = range.end;
+  });
+
+  html += escapeHtml(text.slice(cursor));
+  mainTextHighlightsEl.innerHTML = html;
+  syncHighlightLayer();
+}
+
+function syncHighlightLayer() {
+  mainTextHighlightsEl.style.height = mainTextEl.offsetHeight + 'px';
+  mainTextHighlightsEl.scrollTop = mainTextEl.scrollTop;
 }
 
 function renderWritingIssues() {
-  const issues = getWritingIssues(mainTextEl.value);
+  const details = getWritingIssueDetails(mainTextEl.value);
+  const issues = details.issues;
+  renderIssueUnderlines(details.ranges);
 
   if (!issues.length) {
     if (lastResolvedWritingIssue) {
@@ -248,6 +337,8 @@ mainTextEl.addEventListener('input', () => {
   renderWritingIssues();
   sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
 });
+mainTextEl.addEventListener('scroll', syncHighlightLayer);
+window.addEventListener('resize', syncHighlightLayer);
 
 // ===== Load saved state =====
 async function loadSavedState() {
