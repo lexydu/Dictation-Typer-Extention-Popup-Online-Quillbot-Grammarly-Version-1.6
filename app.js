@@ -27,6 +27,8 @@ const increaseBtn      = document.getElementById('increaseBtn');
 const decreaseBtn      = document.getElementById('decreaseBtn');
 const resetBtn         = document.getElementById('resetBtn');
 const clearTextBtn     = document.getElementById('clearTextBtn');
+const writingIssuesEl  = document.getElementById('writingIssues');
+const writingIssuesListEl = document.getElementById('writingIssuesList');
 const setTargetBtn     = document.getElementById('setTargetBtn');
 const targetLabelEl    = document.getElementById('targetLabel');
 const toggleRulesBtn   = document.getElementById('toggleRules');
@@ -147,8 +149,84 @@ function updateCharCounter() {
   charCounterEl.textContent = len + ' / ' + MAX_CHARS;
   charCounterEl.style.color = len > MAX_CHARS ? 'red' : '#888';
 }
+
+function hasQuestionShape(sentence) {
+  return /^(who|what|when|where|why|how|can|could|would|should|will|do|does|did|is|are|am|was|were|have|has|had)\b/i.test(sentence.trim());
+}
+
+function getWritingIssues(text) {
+  const issues = [];
+  const trimmed = text.trim();
+
+  if (!trimmed) return issues;
+
+  if (/\bi\b/.test(text)) {
+    issues.push('Use uppercase "I" when referring to yourself.');
+  }
+
+  if (/\s{2,}/.test(text)) {
+    issues.push('Remove extra spaces.');
+  }
+
+  const commonFixes = [
+    { pattern: /\bdont\b/i, label: 'Check "dont" - did you mean "don\'t"?' },
+    { pattern: /\bcant\b/i, label: 'Check "cant" - did you mean "can\'t"?' },
+    { pattern: /\bwont\b/i, label: 'Check "wont" - did you mean "won\'t"?' },
+    { pattern: /\bim\b/i, label: 'Check "im" - did you mean "I\'m"?' },
+    { pattern: /\bive\b/i, label: 'Check "ive" - did you mean "I\'ve"?' },
+    { pattern: /\bill\b/i, label: 'Check "ill" - did you mean "I\'ll"?' },
+    { pattern: /\byoure\b/i, label: 'Check "youre" - did you mean "you\'re"?' },
+    { pattern: /\bthats\b/i, label: 'Check "thats" - did you mean "that\'s"?' }
+  ];
+
+  commonFixes.forEach(item => {
+    if (item.pattern.test(text)) issues.push(item.label);
+  });
+
+  const sentences = trimmed.match(/[^.!?]+[.!?]?/g) || [trimmed];
+  sentences.forEach(rawSentence => {
+    const sentence = rawSentence.trim();
+    if (!sentence) return;
+
+    const endsWithPunctuation = /[.!?]$/.test(sentence);
+    if (!endsWithPunctuation) {
+      if (hasQuestionShape(sentence)) {
+        issues.push('This looks like a question and may need a question mark.');
+      } else {
+        issues.push('This sentence may need final punctuation.');
+      }
+    } else if (hasQuestionShape(sentence) && !/\?$/.test(sentence)) {
+      issues.push('This looks like a question but does not end with a question mark.');
+    }
+  });
+
+  return Array.from(new Set(issues));
+}
+
+function renderWritingIssues() {
+  const issues = getWritingIssues(mainTextEl.value);
+
+  if (!issues.length) {
+    writingIssuesEl.style.display = 'none';
+    writingIssuesListEl.innerHTML = '';
+    mainTextEl.classList.remove('has-writing-issues');
+    return;
+  }
+
+  writingIssuesListEl.innerHTML = '';
+  issues.forEach(issue => {
+    const li = document.createElement('li');
+    li.textContent = issue;
+    writingIssuesListEl.appendChild(li);
+  });
+
+  writingIssuesEl.style.display = 'block';
+  mainTextEl.classList.add('has-writing-issues');
+}
+
 mainTextEl.addEventListener('input', () => {
   updateCharCounter();
+  renderWritingIssues();
   sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
 });
 
@@ -160,6 +238,7 @@ async function loadSavedState() {
       mainTextEl.value = res.data[STORAGE_TEXT_KEY] || '';
       messageCounterEl.textContent = 'Messages Sent: ' + (res.data[STORAGE_MESSAGES_KEY] || 0);
       updateCharCounter();
+      renderWritingIssues();
       renderLog(res.data[STORAGE_LOG_KEY] || []);
       renderCustomRules(res.data[STORAGE_RULES_KEY] || []);
     }
@@ -361,6 +440,7 @@ clearTextBtn.addEventListener('click', async () => {
   if (!confirm('Clear all saved text?')) return;
   mainTextEl.value = '';
   updateCharCounter();
+  renderWritingIssues();
   await sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: '' } }).catch(() => {});
   showAlert('✔️ Text cleared!');
 });
@@ -503,6 +583,7 @@ emojiPanel.addEventListener('click', (e) => {
 
   insertAtCursor(mainTextEl, insertText);
   updateCharCounter();
+  renderWritingIssues();
   sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
   emojiPanel.style.display = 'none';
   mainTextEl.focus();
@@ -516,3 +597,4 @@ document.addEventListener('click', (e) => {
 });
 
 updateCharCounter();
+renderWritingIssues();
