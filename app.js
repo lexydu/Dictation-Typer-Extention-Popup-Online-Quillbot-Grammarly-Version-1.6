@@ -28,9 +28,9 @@ const increaseBtn      = document.getElementById('increaseBtn');
 const decreaseBtn      = document.getElementById('decreaseBtn');
 const resetBtn         = document.getElementById('resetBtn');
 const clearTextBtn     = document.getElementById('clearTextBtn');
-const mainTextHighlightsEl = document.getElementById('mainTextHighlights');
+let mainTextHighlightsEl = document.getElementById('mainTextHighlights');
 const writingIssuesEl  = document.getElementById('writingIssues');
-const writingIssuesTitleEl = writingIssuesEl.querySelector('.writing-issues-title');
+const writingIssuesTitleEl = writingIssuesEl ? writingIssuesEl.querySelector('.writing-issues-title') : null;
 const writingIssuesListEl = document.getElementById('writingIssuesList');
 const setTargetBtn     = document.getElementById('setTargetBtn');
 const targetLabelEl    = document.getElementById('targetLabel');
@@ -48,6 +48,14 @@ const extStatusEl      = document.getElementById('extStatus');
 const notConnectedBanner = document.getElementById('notConnectedBanner');
 const emojiBtn = document.getElementById('emojiBtn');
 const emojiPanel = document.getElementById('emojiPanel');
+
+if (!mainTextHighlightsEl && mainTextEl && mainTextEl.parentElement) {
+  mainTextHighlightsEl = document.createElement('div');
+  mainTextHighlightsEl.id = 'mainTextHighlights';
+  mainTextHighlightsEl.className = 'textarea-highlights';
+  mainTextHighlightsEl.setAttribute('aria-hidden', 'true');
+  mainTextEl.parentElement.insertBefore(mainTextHighlightsEl, mainTextEl);
+}
 
 let extensionConnected = false;
 let lastTypedText = '';
@@ -258,6 +266,8 @@ function getWritingIssues(text) {
 }
 
 function renderIssueUnderlines(ranges) {
+  if (!mainTextHighlightsEl) return;
+
   const text = mainTextEl.value;
 
   if (!text || !ranges.length) {
@@ -294,11 +304,15 @@ function renderIssueUnderlines(ranges) {
 }
 
 function syncHighlightLayer() {
+  if (!mainTextHighlightsEl) return;
+
   mainTextHighlightsEl.style.height = mainTextEl.offsetHeight + 'px';
   mainTextHighlightsEl.scrollTop = mainTextEl.scrollTop;
 }
 
 function renderWritingIssues() {
+  if (!writingIssuesEl || !writingIssuesTitleEl || !writingIssuesListEl) return;
+
   const details = getWritingIssueDetails(mainTextEl.value);
   const issues = details.issues;
   renderIssueUnderlines(details.ranges);
@@ -571,7 +585,9 @@ function normalizeMessageCount(val) {
 function setMessageCountDisplay(val) {
   const count = normalizeMessageCount(val);
   messageCounterEl.textContent = 'Messages Sent: ' + count;
-  messageCountInputEl.value = String(count);
+  if (messageCountInputEl) {
+    messageCountInputEl.value = String(count);
+  }
   return count;
 }
 
@@ -580,15 +596,17 @@ async function updateMessageDisplay(val) {
   await sendToExtension('storageSet', { data: { [STORAGE_MESSAGES_KEY]: count } }).catch(() => {});
 }
 
-messageCountInputEl.addEventListener('change', () => {
-  updateMessageDisplay(messageCountInputEl.value);
-});
+if (messageCountInputEl) {
+  messageCountInputEl.addEventListener('change', () => {
+    updateMessageDisplay(messageCountInputEl.value);
+  });
 
-messageCountInputEl.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    messageCountInputEl.blur();
-  }
-});
+  messageCountInputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      messageCountInputEl.blur();
+    }
+  });
+}
 
 increaseBtn.addEventListener('click', async () => {
   const res = await sendToExtension('storageGet', { keys: [STORAGE_MESSAGES_KEY] });
