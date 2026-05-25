@@ -179,6 +179,44 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 .link-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
 .link-btn:hover { color: #333; }
 
+.writing-issues {
+  margin-top: -8px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+.writing-issues-warning {
+  border: 1px solid #f0d38a;
+  background: #fffaf0;
+  color: #5f4700;
+}
+
+.writing-issues-success {
+  border: 1px solid #9bd5b5;
+  background: #eefaf4;
+  color: #006038;
+}
+
+.writing-issues-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.writing-issues-list {
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.writing-issues-list li + li { margin-top: 3px; }
+
+textarea.has-writing-issues {
+  border-color: #d69e2e;
+  background: #fffdf8;
+}
+
 /* ===== CONTROLS ===== */
 .controls-row {
   display: flex;
