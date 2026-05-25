@@ -232,6 +232,11 @@ function getWritingIssueDetails(text) {
     const sentenceEnd = sentenceStart + sentence.length;
     const lastWordRange = getLastWordRange(text, sentenceStart, sentenceEnd);
     const endsWithPunctuation = /[.!?]$/.test(sentence);
+    const firstChar = text.charAt(sentenceStart);
+
+    if (/[a-z]/.test(firstChar)) {
+      addIssue('Start the sentence with a capital letter.', sentenceStart, sentenceStart + 1);
+    }
 
     if (!endsWithPunctuation) {
       if (hasQuestionShape(sentence)) {
