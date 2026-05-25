@@ -1,168 +1,600 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dictation Typer — Writing Page</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+// ===== app.js — Dictation Typer Online Companion Page =====
+// Communicates with the Chrome extension via bridge.js (content script).
+// All chrome.storage and chrome.scripting calls go through the bridge.
 
-  <div id="pageAlert"></div>
+'use strict';
 
-  <div class="page-wrapper">
+// ===== Storage keys =====
+const STORAGE_TEXT_KEY     = 'dictation_saved_text';
+const STORAGE_MESSAGES_KEY = 'dictation_messages_sent';
+const STORAGE_LOG_KEY      = 'dictation_message_log';
+const STORAGE_RULES_KEY    = 'dictation_custom_rules';
+const STORAGE_TARGET_TAB   = 'dictation_target_tab';
+const MAX_CHARS            = 200;
 
-    <!-- ===== HEADER ===== -->
-    <header class="header">
-      <div class="header-left">
-        <div class="logo-dot"></div>
-        <div>
-          <h1>Dictation Typer <span class="header-sub">Writing Page</span></h1>
-          <div class="ext-status" id="extStatus">🔌 Connecting to extension...</div>
-        </div>
-      </div>
-      <div class="header-right">
-        <div id="statusPill" class="status-pill">Ready</div>
-      </div>
-    </header>
+// ===== Element references =====
+const mainTextEl       = document.getElementById('mainText');
+const charCounterEl    = document.getElementById('charCounter');
+const startBtn         = document.getElementById('startBtn');
+const stopBtn          = document.getElementById('stopBtn');
+const speedSelect      = document.getElementById('speedSelect');
+const appendMode       = document.getElementById('appendMode');
+const typingIndicator  = document.getElementById('typingIndicator');
+const statusPill       = document.getElementById('statusPill');
+const pageAlertEl      = document.getElementById('pageAlert');
+const messageCounterEl = document.getElementById('messageCounter');
+const increaseBtn      = document.getElementById('increaseBtn');
+const decreaseBtn      = document.getElementById('decreaseBtn');
+const resetBtn         = document.getElementById('resetBtn');
+const clearTextBtn     = document.getElementById('clearTextBtn');
+const writingIssuesEl  = document.getElementById('writingIssues');
+const writingIssuesListEl = document.getElementById('writingIssuesList');
+const setTargetBtn     = document.getElementById('setTargetBtn');
+const targetLabelEl    = document.getElementById('targetLabel');
+const toggleRulesBtn   = document.getElementById('toggleRules');
+const rulesSectionEl   = document.getElementById('rulesSection');
+const customRulesListEl= document.getElementById('customRulesList');
+const newRuleInputEl   = document.getElementById('newRuleInput');
+const addRuleBtnEl     = document.getElementById('addRuleBtn');
+const toggleLogBtn     = document.getElementById('toggleLog');
+const logSectionEl     = document.getElementById('logSection');
+const logListEl        = document.getElementById('logList');
+const exportLogBtn     = document.getElementById('exportLogBtn');
+const clearLogBtn      = document.getElementById('clearLogBtn');
+const extStatusEl      = document.getElementById('extStatus');
+const notConnectedBanner = document.getElementById('notConnectedBanner');
+const emojiBtn = document.getElementById('emojiBtn');
+const emojiPanel = document.getElementById('emojiPanel');
 
-    <!-- ===== NOT CONNECTED BANNER ===== -->
-    <div id="notConnectedBanner" class="banner banner-warn" style="display:none;">
-      ⚠️ Extension not detected. Make sure the Dictation Typer extension is installed and enabled in Chrome, then refresh this page.
-    </div>
+let extensionConnected = false;
+let lastTypedText = '';
+let requestCounter = 0;
+const pendingRequests = {};
 
-    <!-- ===== MAIN LAYOUT ===== -->
-    <div class="main-layout">
+// ===== Bridge communication =====
+function sendToExtension(action, data = {}) {
+  return new Promise((resolve, reject) => {
+    const requestId = ++requestCounter;
+    pendingRequests[requestId] = { resolve, reject };
+    setTimeout(() => {
+      if (pendingRequests[requestId]) {
+        delete pendingRequests[requestId];
+        reject(new Error('Extension timeout'));
+      }
+    }, 5000);
+    window.postMessage({ source: 'dictation-page', action, requestId, ...data }, '*');
+  });
+}
 
-      <!-- ===== LEFT: WRITING AREA ===== -->
-      <div class="writing-panel">
+// ===== Listen for messages from bridge.js =====
+window.addEventListener('message', (event) => {
+  if (!event.data || event.data.source !== 'dictation-bridge') return;
+  const msg = event.data;
 
-        <!-- Tab Lock -->
-        <div class="target-row" id="targetRow">
-          <div class="target-row-top">
-            <div id="targetLabel" class="target-label">No tab locked — click "🎯 Lock to Tab" to set your platform tab</div>
-            <button id="setTargetBtn" class="set-target-btn">🎯 Lock to Tab</button>
-          </div>
-          <div class="target-instructions">
-            <strong>How to lock:</strong> Click "🎯 Lock to Tab" → switch to your platform tab within 5 seconds → locks automatically. Never changes until you click again.
-          </div>
-        </div>
+  // Extension responded to ping — now we know it's connected
+  if (msg.action === 'extensionReady') {
+    if (extensionConnected) return; // ignore duplicates
+    extensionConnected = true;
+    extStatusEl.textContent = '✅ Extension connected';
+    extStatusEl.className = 'ext-status connected';
+    notConnectedBanner.style.display = 'none';
+    startBtn.disabled = false;
+    loadSavedState();
+    return;
+  }
 
-       <div class="panel-label">Your Message</div>
+  // finishedTyping broadcast from background
+  if (msg.action === 'finishedTyping') {
+    messageCounterEl.textContent = 'Messages Sent: ' + msg.count;
+    if (lastTypedText) saveToLog(lastTypedText);
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    scheduleStatusFade();
+    return;
+  }
 
-<div class="textarea-wrap">
-  <textarea
-    id="mainText"
-    placeholder="Write your message here. Quillbot and Grammarly both work on this page — polish your text freely, then click Start Typing."
-  ></textarea>
+  // Resolve pending request
+  if (msg.requestId && pendingRequests[msg.requestId]) {
+    const { resolve } = pendingRequests[msg.requestId];
+    delete pendingRequests[msg.requestId];
+    resolve(msg);
+  }
+});
 
-  <button id="emojiBtn" class="emoji-btn" type="button">😊</button>
+// ===== Ping bridge repeatedly until connected =====
+// Fixes timing issue: bridge.js may load before or after app.js
+let pingInterval = null;
+let pingAttempts = 0;
+const MAX_PING_ATTEMPTS = 10; // try for ~5 seconds
 
-  <div id="emojiPanel" class="emoji-panel" style="display:none;">
-    <button class="emoji-item" type="button">😀</button>
-    <button class="emoji-item" type="button">😃</button>
-    <button class="emoji-item" type="button">😄</button>
-    <button class="emoji-item" type="button">😁</button>
-    <button class="emoji-item" type="button">😍</button>
-    <button class="emoji-item" type="button">😘</button>
-    <button class="emoji-item" type="button">😂</button>
-    <button class="emoji-item" type="button">😉</button>
-    <button class="emoji-item" type="button">😊</button>
-    <button class="emoji-item" type="button">🥳</button>
-    <button class="emoji-item" type="button">🙏</button>
-    <button class="emoji-item" type="button">👍</button>
-    <button class="emoji-item" type="button">❤️</button>
-    <button class="emoji-item" type="button">🔥</button>
-  </div>
-</div>
+function startPinging() {
+  pingInterval = setInterval(() => {
+    if (extensionConnected) {
+      clearInterval(pingInterval);
+      return;
+    }
+    pingAttempts++;
+    window.postMessage({ source: 'dictation-page', action: 'ping' }, '*');
 
-<div class="textarea-footer">
-  <span id="charCounter" class="char-counter">0 / 200</span>
-  <button id="clearTextBtn" class="link-btn">Clear text</button>
-</div>
+    if (pingAttempts >= MAX_PING_ATTEMPTS) {
+      clearInterval(pingInterval);
+      if (!extensionConnected) {
+        extStatusEl.textContent = '❌ Extension not detected';
+        extStatusEl.className = 'ext-status disconnected';
+        notConnectedBanner.style.display = 'block';
+      }
+    }
+  }, 500);
+}
+
+// Start pinging after a short delay to let bridge.js initialise
+setTimeout(startPinging, 300);
+
+// ===== Alert =====
+let alertTimeout = null;
+function showAlert(msg) {
+  pageAlertEl.textContent = msg;
+  pageAlertEl.style.display = 'block';
+  pageAlertEl.style.opacity = '1';
+  clearTimeout(alertTimeout);
+  alertTimeout = setTimeout(() => {
+    pageAlertEl.style.opacity = '0';
+    setTimeout(() => { pageAlertEl.style.display = 'none'; pageAlertEl.style.opacity = '1'; }, 400);
+  }, 3500);
+}
+
+// ===== Char counter =====
+function updateCharCounter() {
+  const len = mainTextEl.value.length;
+  charCounterEl.textContent = len + ' / ' + MAX_CHARS;
+  charCounterEl.style.color = len > MAX_CHARS ? 'red' : '#888';
+}
+
+function hasQuestionShape(sentence) {
+  return /^(who|what|when|where|why|how|can|could|would|should|will|do|does|did|is|are|am|was|were|have|has|had)\b/i.test(sentence.trim());
+}
+
+function getWritingIssues(text) {
+  const issues = [];
+  const trimmed = text.trim();
+
+  if (!trimmed) return issues;
+
+  if (/\bi\b/.test(text)) {
+    issues.push('Use uppercase "I" when referring to yourself.');
+  }
+
+  if (/\s{2,}/.test(text)) {
+    issues.push('Remove extra spaces.');
+  }
+
+  const commonFixes = [
+    { pattern: /\bdont\b/i, label: 'Check "dont" - did you mean "don\'t"?' },
+    { pattern: /\bcant\b/i, label: 'Check "cant" - did you mean "can\'t"?' },
+    { pattern: /\bwont\b/i, label: 'Check "wont" - did you mean "won\'t"?' },
+    { pattern: /\bim\b/i, label: 'Check "im" - did you mean "I\'m"?' },
+    { pattern: /\bive\b/i, label: 'Check "ive" - did you mean "I\'ve"?' },
+    { pattern: /\bill\b/i, label: 'Check "ill" - did you mean "I\'ll"?' },
+    { pattern: /\byoure\b/i, label: 'Check "youre" - did you mean "you\'re"?' },
+    { pattern: /\bthats\b/i, label: 'Check "thats" - did you mean "that\'s"?' }
+  ];
+
+  commonFixes.forEach(item => {
+    if (item.pattern.test(text)) issues.push(item.label);
+  });
+
+  const sentences = trimmed.match(/[^.!?]+[.!?]?/g) || [trimmed];
+  sentences.forEach(rawSentence => {
+    const sentence = rawSentence.trim();
+    if (!sentence) return;
+
+    const endsWithPunctuation = /[.!?]$/.test(sentence);
+    if (!endsWithPunctuation) {
+      if (hasQuestionShape(sentence)) {
+        issues.push('This looks like a question and may need a question mark.');
+      } else {
+        issues.push('This sentence may need final punctuation.');
+      }
+    } else if (hasQuestionShape(sentence) && !/\?$/.test(sentence)) {
+      issues.push('This looks like a question but does not end with a question mark.');
+    }
+  });
+
+  return Array.from(new Set(issues));
+}
+
+function renderWritingIssues() {
+  const issues = getWritingIssues(mainTextEl.value);
+
+  if (!issues.length) {
+    writingIssuesEl.style.display = 'none';
+    writingIssuesListEl.innerHTML = '';
+    mainTextEl.classList.remove('has-writing-issues');
+    return;
+  }
+
+  writingIssuesListEl.innerHTML = '';
+  issues.forEach(issue => {
+    const li = document.createElement('li');
+    li.textContent = issue;
+    writingIssuesListEl.appendChild(li);
+  });
+
+  writingIssuesEl.style.display = 'block';
+  mainTextEl.classList.add('has-writing-issues');
+}
+
+mainTextEl.addEventListener('input', () => {
+  updateCharCounter();
+  renderWritingIssues();
+  sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
+});
+
+// ===== Load saved state =====
+async function loadSavedState() {
+  try {
+    const res = await sendToExtension('storageGet', { keys: [STORAGE_TEXT_KEY, STORAGE_MESSAGES_KEY, STORAGE_LOG_KEY, STORAGE_RULES_KEY] });
+    if (res.success && res.data) {
+      mainTextEl.value = res.data[STORAGE_TEXT_KEY] || '';
+      messageCounterEl.textContent = 'Messages Sent: ' + (res.data[STORAGE_MESSAGES_KEY] || 0);
+      updateCharCounter();
+      renderWritingIssues();
+      renderLog(res.data[STORAGE_LOG_KEY] || []);
+      renderCustomRules(res.data[STORAGE_RULES_KEY] || []);
+    }
+    await refreshTargetLabel();
+  } catch (e) { console.error('loadSavedState', e); }
+}
+
+// ===== Target tab lock =====
+async function refreshTargetLabel() {
+  try {
+    const res = await sendToExtension('getTargetTab');
+    if (!res.success || !res.tab) {
+      targetLabelEl.textContent = 'No tab locked — click "🎯 Lock to Tab" to set your platform tab';
+      targetLabelEl.style.color = '#b30000';
+      setTargetBtn.textContent = '🎯 Lock to Tab';
+    } else {
+      targetLabelEl.textContent = '🔒 Locked: ' + (res.tab.title || '').substring(0, 50);
+      targetLabelEl.style.color = '#007946';
+      setTargetBtn.textContent = '🔄 Change Lock';
+    }
+  } catch (e) { console.error('refreshTargetLabel', e); }
+}
+
+let lockCountdownInterval = null;
+
+setTargetBtn.addEventListener('click', async () => {
+  if (!extensionConnected) { showAlert('⚠️ Extension not connected.'); return; }
+
+  if (lockCountdownInterval) {
+    clearInterval(lockCountdownInterval);
+    lockCountdownInterval = null;
+    setTargetBtn.textContent = '🎯 Lock to Tab';
+    targetLabelEl.textContent = 'Lock cancelled. Click again when ready.';
+    targetLabelEl.style.color = '#888';
+    return;
+  }
+
+  let seconds = 5;
+  targetLabelEl.style.color = '#856404';
+  targetLabelEl.textContent = 'Switch to your platform tab now... locking in ' + seconds + 's  (click to cancel)';
+  setTargetBtn.textContent = '✕ Cancel';
+
+  lockCountdownInterval = setInterval(async () => {
+    seconds--;
+    if (seconds > 0) {
+      targetLabelEl.textContent = 'Switch to your platform tab now... locking in ' + seconds + 's  (click to cancel)';
+      return;
+    }
+
+    clearInterval(lockCountdownInterval);
+    lockCountdownInterval = null;
+
+    try {
+      const res = await sendToExtension('getAllTabs');
+      if (!res.success) { showAlert('Could not get tabs. Try again.'); return; }
+
+      const pageUrl = window.location.href;
+    const candidates = res.tabs.filter(t =>
+      t.url &&
+      !t.url.includes('https://lexydu.github.io/Dictation-Typer-Extention-Popup-Online-Quillbot-Grammarly-Version-1.6') &&
+      !t.url.startsWith('chrome://') &&
+      !t.url.startsWith('chrome-extension://') &&
+        !t.url.startsWith('chrome://') &&
+        !t.url.startsWith('chrome-extension://')
+      );
+
+      if (!candidates.length) {
+        targetLabelEl.textContent = 'No valid tab found. Open your platform tab first.';
+        targetLabelEl.style.color = '#b30000';
+        setTargetBtn.textContent = '🎯 Lock to Tab';
+        return;
+      }
+
+      candidates.sort((a, b) => (b.lastAccessed || 0) - (a.lastAccessed || 0));
+      const target = candidates[0];
+
+      await sendToExtension('storageSet', {
+        data: { [STORAGE_TARGET_TAB]: { id: target.id, title: target.title || target.url } }
+      });
+
+      await refreshTargetLabel();
+      showAlert('🔒 Locked to: "' + (target.title || target.url).substring(0, 40) + '"');
+    } catch (e) {
+      console.error('Lock error', e);
+      targetLabelEl.textContent = 'Something went wrong. Please try again.';
+      targetLabelEl.style.color = '#b30000';
+      setTargetBtn.textContent = '🎯 Lock to Tab';
+    }
+  }, 1000);
+});
+
+// ===== Validation =====
+async function validateTextRules(text) {
+  if (!text.includes('?')) { showAlert('⚠️ Your message does not contain a question!'); return false; }
+  if (text.toLowerCase().includes('my dick')) { showAlert('⚠️ Inappropriate phrase detected!'); return false; }
+  if (text.length < 150) { showAlert('⚠️ Your message is too short! (Minimum 150 characters)'); return false; }
+  try {
+    const res = await sendToExtension('storageGet', { keys: [STORAGE_RULES_KEY] });
+    const phrases = (res.success && res.data && res.data[STORAGE_RULES_KEY]) || [];
+    for (const phrase of phrases) {
+      if (phrase && text.toLowerCase().includes(phrase.toLowerCase())) {
+        showAlert('⚠️ Banned phrase detected: "' + phrase + '"');
+        return false;
+      }
+    }
+  } catch (e) { console.error('validate error', e); }
+  return true;
+}
+
+// ===== Status =====
+let dotsInterval = null;
+function startStatusIndicator() {
+  clearInterval(dotsInterval);
+  typingIndicator.style.display = 'block';
+  statusPill.textContent = 'Typing...';
+  statusPill.className = 'status-pill typing';
+  let dots = 0;
+  typingIndicator.textContent = 'Typing';
+  dotsInterval = setInterval(() => {
+    dots = (dots + 1) % 4;
+    typingIndicator.textContent = 'Typing' + '.'.repeat(dots);
+  }, 500);
+}
+function scheduleStatusFade() {
+  clearInterval(dotsInterval);
+  setTimeout(() => {
+    typingIndicator.style.display = 'none';
+    typingIndicator.textContent = '';
+    statusPill.textContent = 'Ready';
+    statusPill.className = 'status-pill';
+  }, 2500);
+}
+
+// ===== Start =====
+startBtn.addEventListener('click', async () => {
+  if (!extensionConnected) { showAlert('⚠️ Extension not connected.'); return; }
+  const text = mainTextEl.value || '';
+  if (!await validateTextRules(text)) return;
+
+  const targetRes = await sendToExtension('getTargetTab').catch(() => null);
+  if (!targetRes || !targetRes.tab) {
+    showAlert('⚠️ No tab locked. Click "🎯 Lock to Tab" first.');
+    return;
+  }
+
+  lastTypedText = text;
+  let delayRange;
+  const speed = speedSelect.value;
+  if (speed === 'superfast') delayRange = [6, 8];
+  else if (speed === 'fast') delayRange = [8, 10];
+  else if (speed === 'normal') delayRange = [50, 200];
+  else delayRange = [100, 400];
+
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+  startStatusIndicator();
+
+  try {
+    const res = await sendToExtension('startTyping', { text, delayRange, appendMode: !!appendMode.checked });
+    if (!res.success) {
+      // Show the specific error message from background.js
+      const errorMsg = res.message || 'Failed to type. Try relocking your tab.';
+      showAlert('⚠️ ' + errorMsg);
+
+      // If lock is stale, clear it from UI too
+      if (res.error === 'TAB_CLOSED' || res.error === 'NO_LOCK') {
+        targetLabelEl.textContent = 'Tab lock lost — please lock again';
+        targetLabelEl.style.color = '#b30000';
+        setTargetBtn.textContent = '🎯 Lock to Tab';
+        await sendToExtension('storageSet', { data: { [STORAGE_TARGET_TAB]: null } }).catch(() => {});
+      }
+
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      scheduleStatusFade();
+      return;
+    }
+  } catch (err) {
+    console.error('Start typing error', err);
+    showAlert('⚠️ Could not reach extension. Please reload the page.');
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    scheduleStatusFade();
+  }
+});
+
+// ===== Stop =====
+stopBtn.addEventListener('click', async () => {
+  await sendToExtension('stopTyping').catch(() => {});
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  statusPill.textContent = 'Stopped';
+  statusPill.className = 'status-pill stopped';
+  scheduleStatusFade();
+});
+
+// ===== Clear text =====
+clearTextBtn.addEventListener('click', async () => {
+  if (!confirm('Clear all saved text?')) return;
+  mainTextEl.value = '';
+  updateCharCounter();
+  renderWritingIssues();
+  await sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: '' } }).catch(() => {});
+  showAlert('✔️ Text cleared!');
+});
+
+// ===== Counter =====
+async function updateMessageDisplay(val) {
+  messageCounterEl.textContent = 'Messages Sent: ' + val;
+  await sendToExtension('storageSet', { data: { [STORAGE_MESSAGES_KEY]: val } }).catch(() => {});
+}
+increaseBtn.addEventListener('click', async () => {
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_MESSAGES_KEY] });
+  updateMessageDisplay(Number((res.data && res.data[STORAGE_MESSAGES_KEY]) || 0) + 1);
+});
+decreaseBtn.addEventListener('click', async () => {
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_MESSAGES_KEY] });
+  const n = Number((res.data && res.data[STORAGE_MESSAGES_KEY]) || 0);
+  if (n > 0) updateMessageDisplay(n - 1);
+});
+resetBtn.addEventListener('click', async () => {
+  if (!confirm('Reset Messages Sent to 0?')) return;
+  await sendToExtension('storageSet', { data: { [STORAGE_MESSAGES_KEY]: 0 } }).catch(() => {});
+  messageCounterEl.textContent = 'Messages Sent: 0';
+});
+
+// ===== Log =====
+function renderLog(log) {
+  logListEl.innerHTML = '';
+  if (!log || !log.length) { logListEl.innerHTML = '<div class="log-empty">No messages logged yet.</div>'; return; }
+  log.forEach((entry, i) => {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = '<div class="log-meta">#' + (log.length - i) + ' — ' + new Date(entry.timestamp).toLocaleString() + '</div>' +
+      '<div class="log-text">' + entry.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+    logListEl.appendChild(div);
+  });
+}
+async function saveToLog(text) {
+  try {
+    const res = await sendToExtension('storageGet', { keys: [STORAGE_LOG_KEY] });
+    const log = (res.success && res.data && res.data[STORAGE_LOG_KEY]) || [];
+    log.unshift({ text, timestamp: new Date().toISOString() });
+    await sendToExtension('storageSet', { data: { [STORAGE_LOG_KEY]: log } });
+    renderLog(log);
+  } catch (e) { console.error('saveToLog', e); }
+}
+toggleLogBtn.addEventListener('click', () => {
+  const h = logSectionEl.style.display === 'none';
+  logSectionEl.style.display = h ? 'block' : 'none';
+  toggleLogBtn.textContent = h ? '▲' : '▼';
+});
+exportLogBtn.addEventListener('click', async () => {
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_LOG_KEY] }).catch(() => null);
+  const log = (res && res.data && res.data[STORAGE_LOG_KEY]) || [];
+  if (!log.length) { showAlert('No messages to export.'); return; }
+  const lines = log.map((e, i) => '#' + (log.length - i) + ' — ' + new Date(e.timestamp).toLocaleString() + '\n' + e.text + '\n');
+  const blob = new Blob([lines.join('\n---\n\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dictation_log_' + Date.now() + '.txt'; a.click();
+  URL.revokeObjectURL(url);
+});
+clearLogBtn.addEventListener('click', async () => {
+  if (!confirm('Clear all logged messages?')) return;
+  await sendToExtension('storageSet', { data: { [STORAGE_LOG_KEY]: [] } }).catch(() => {});
+  renderLog([]);
+  showAlert('✔️ Log cleared!');
+});
+
+// ===== Rules =====
+function renderCustomRules(rules) {
+  customRulesListEl.innerHTML = '';
+  if (!rules || !rules.length) { customRulesListEl.innerHTML = '<div class="rule-empty">No custom rules yet.</div>'; return; }
+  rules.forEach((phrase, i) => {
+    const div = document.createElement('div');
+    div.className = 'rule-row rule-custom';
+    div.innerHTML = '<span class="rule-custom-text">🚫 Banned: "' + phrase + '"</span><button class="rule-remove">✕</button>';
+    div.querySelector('.rule-remove').addEventListener('click', () => removeCustomRule(i));
+    customRulesListEl.appendChild(div);
+  });
+}
+
+async function removeCustomRule(index) {
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_RULES_KEY] });
+  const rules = (res.success && res.data && res.data[STORAGE_RULES_KEY]) || [];
+  rules.splice(index, 1);
+  await sendToExtension('storageSet', { data: { [STORAGE_RULES_KEY]: rules } });
+  renderCustomRules(rules);
+  showAlert('✔️ Rule removed.');
+}
+
+toggleRulesBtn.addEventListener('click', () => {
+  const h = rulesSectionEl.style.display === 'none';
+  rulesSectionEl.style.display = h ? 'block' : 'none';
+  toggleRulesBtn.textContent = h ? '▲' : '▼';
+});
+
+addRuleBtnEl.addEventListener('click', async () => {
+  const phrase = newRuleInputEl.value.trim();
+  if (!phrase) { showAlert('Enter a phrase to ban.'); return; }
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_RULES_KEY] });
+  const rules = (res.success && res.data && res.data[STORAGE_RULES_KEY]) || [];
+  if (rules.map(r => r.toLowerCase()).includes(phrase.toLowerCase())) { showAlert('Already in your rules.'); return; }
+  rules.push(phrase);
+  await sendToExtension('storageSet', { data: { [STORAGE_RULES_KEY]: rules } });
+  renderCustomRules(rules);
+  newRuleInputEl.value = '';
+  showAlert('✔️ Banned: "' + phrase + '"');
+});
+
+newRuleInputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addRuleBtnEl.click(); });
+
+// ===== Emoji Picker =====
+function insertAtCursor(el, text) {
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? el.value.length;
+  el.value = el.value.slice(0, start) + text + el.value.slice(end);
+  const pos = start + text.length;
+  el.setSelectionRange(pos, pos);
+}
+
+emojiBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  emojiPanel.style.display = (emojiPanel.style.display === 'none') ? 'grid' : 'none';
+});
+
+emojiPanel.addEventListener('click', (e) => {
+  if (!e.target.classList.contains('emoji-item')) return;
+
+  const emoji = e.target.textContent;
+  const start = mainTextEl.selectionStart ?? mainTextEl.value.length;
+  const end = mainTextEl.selectionEnd ?? mainTextEl.value.length;
+
+  const before = mainTextEl.value[start - 1] || '';
+  const after = mainTextEl.value[end] || '';
+
+  const needsSpaceBefore = before && !/\s/.test(before);
+  const needsSpaceAfter = after && !/\s/.test(after);
+
+  const insertText = (needsSpaceBefore ? ' ' : '') + emoji + (needsSpaceAfter ? ' ' : '');
+
+  insertAtCursor(mainTextEl, insertText);
+  updateCharCounter();
+  renderWritingIssues();
+  sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
+  emojiPanel.style.display = 'none';
+  mainTextEl.focus();
+});
 
 
+document.addEventListener('click', (e) => {
+  if (e.target !== emojiBtn && !emojiPanel.contains(e.target)) {
+    emojiPanel.style.display = 'none';
+  }
+});
 
-        <!-- Controls -->
-        <div class="controls-row">
-          <div class="control-group">
-            <label class="control-label" for="speedSelect">Typing Speed</label>
-            <select id="speedSelect" class="select-input">
-              <option value="superfast" selected>Super Fast</option>
-              <option value="fast">Fast</option>
-              <option value="normal">Normal</option>
-              <option value="slow">Slow</option>
-            </select>
-          </div>
-          <div class="control-group check-group">
-            <label class="checkbox-label">
-              <input id="appendMode" type="checkbox">
-              <span>Append instead of overwrite</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Action buttons -->
-        <div class="action-row">
-          <button id="startBtn" class="btn btn-start" disabled>▶ Start Typing</button>
-          <button id="stopBtn" class="btn btn-stop" disabled>■ Stop Typing</button>
-        </div>
-
-        <div id="typingIndicator" class="typing-indicator" style="display:none;">Typing...</div>
-
-        <!-- Counter -->
-        <div class="counter-row">
-          <div id="messageCounter" class="message-counter">Messages Sent: 0</div>
-          <div class="counter-btns">
-            <button id="increaseBtn" class="count-btn">+</button>
-            <button id="decreaseBtn" class="count-btn">−</button>
-            <button id="resetBtn" class="count-btn count-reset">Reset</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== RIGHT: SIDEBAR ===== -->
-      <div class="sidebar">
-
-        <!-- TEXT RULES -->
-        <div class="sidebar-card">
-          <div class="card-header">
-            <span class="card-title">Text Rules</span>
-            <button class="toggle-btn" id="toggleRules">▼</button>
-          </div>
-          <div id="rulesSection">
-            <div class="builtin-rules">
-              <div class="rule-row rule-locked">🔒 Must contain a question mark (?)</div>
-              <div class="rule-row rule-locked">🔒 Must be at least 150 characters</div>
-              <div class="rule-row rule-locked">🔒 Banned phrase: "my dick"</div>
-            </div>
-            <div id="customRulesList"></div>
-            <div class="rule-add-row">
-              <input id="newRuleInput" type="text" placeholder="Add a banned phrase..." maxlength="100" class="rule-input" />
-              <button id="addRuleBtn" class="rule-add-btn">Add</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- MESSAGE LOG -->
-        <div class="sidebar-card">
-          <div class="card-header">
-            <span class="card-title">Message Log</span>
-            <button class="toggle-btn" id="toggleLog">▼</button>
-          </div>
-          <div id="logSection">
-            <div id="logList" class="log-list"></div>
-            <div class="log-actions">
-              <button id="exportLogBtn" class="log-btn">⬇ Export .txt</button>
-              <button id="clearLogBtn" class="log-btn log-clear">🗑 Clear Log</button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-</body>
-</html>
+updateCharCounter();
+renderWritingIssues();
