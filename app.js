@@ -23,6 +23,7 @@ const typingIndicator  = document.getElementById('typingIndicator');
 const statusPill       = document.getElementById('statusPill');
 const pageAlertEl      = document.getElementById('pageAlert');
 const messageCounterEl = document.getElementById('messageCounter');
+const messageCountInputEl = document.getElementById('messageCountInput');
 const increaseBtn      = document.getElementById('increaseBtn');
 const decreaseBtn      = document.getElementById('decreaseBtn');
 const resetBtn         = document.getElementById('resetBtn');
@@ -88,7 +89,7 @@ window.addEventListener('message', (event) => {
 
   // finishedTyping broadcast from background
   if (msg.action === 'finishedTyping') {
-    messageCounterEl.textContent = 'Messages Sent: ' + msg.count;
+    updateMessageDisplay(Number(msg.count) || 0);
     if (lastTypedText) saveToLog(lastTypedText);
     startBtn.disabled = false;
     stopBtn.disabled = true;
@@ -351,7 +352,7 @@ async function loadSavedState() {
     const res = await sendToExtension('storageGet', { keys: [STORAGE_TEXT_KEY, STORAGE_MESSAGES_KEY, STORAGE_LOG_KEY, STORAGE_RULES_KEY] });
     if (res.success && res.data) {
       mainTextEl.value = res.data[STORAGE_TEXT_KEY] || '';
-      messageCounterEl.textContent = 'Messages Sent: ' + (res.data[STORAGE_MESSAGES_KEY] || 0);
+      setMessageCountDisplay(Number(res.data[STORAGE_MESSAGES_KEY] || 0));
       updateCharCounter();
       renderWritingIssues();
       renderLog(res.data[STORAGE_LOG_KEY] || []);
@@ -561,23 +562,46 @@ clearTextBtn.addEventListener('click', async () => {
 });
 
 // ===== Counter =====
-async function updateMessageDisplay(val) {
-  messageCounterEl.textContent = 'Messages Sent: ' + val;
-  await sendToExtension('storageSet', { data: { [STORAGE_MESSAGES_KEY]: val } }).catch(() => {});
+function normalizeMessageCount(val) {
+  const number = Number(val);
+  if (!Number.isFinite(number) || number < 0) return 0;
+  return Math.floor(number);
 }
+
+function setMessageCountDisplay(val) {
+  const count = normalizeMessageCount(val);
+  messageCounterEl.textContent = 'Messages Sent: ' + count;
+  messageCountInputEl.value = String(count);
+  return count;
+}
+
+async function updateMessageDisplay(val) {
+  const count = setMessageCountDisplay(val);
+  await sendToExtension('storageSet', { data: { [STORAGE_MESSAGES_KEY]: count } }).catch(() => {});
+}
+
+messageCountInputEl.addEventListener('change', () => {
+  updateMessageDisplay(messageCountInputEl.value);
+});
+
+messageCountInputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    messageCountInputEl.blur();
+  }
+});
+
 increaseBtn.addEventListener('click', async () => {
   const res = await sendToExtension('storageGet', { keys: [STORAGE_MESSAGES_KEY] });
-  updateMessageDisplay(Number((res.data && res.data[STORAGE_MESSAGES_KEY]) || 0) + 1);
+  updateMessageDisplay(normalizeMessageCount((res.data && res.data[STORAGE_MESSAGES_KEY]) || 0) + 1);
 });
 decreaseBtn.addEventListener('click', async () => {
   const res = await sendToExtension('storageGet', { keys: [STORAGE_MESSAGES_KEY] });
-  const n = Number((res.data && res.data[STORAGE_MESSAGES_KEY]) || 0);
+  const n = normalizeMessageCount((res.data && res.data[STORAGE_MESSAGES_KEY]) || 0);
   if (n > 0) updateMessageDisplay(n - 1);
 });
 resetBtn.addEventListener('click', async () => {
   if (!confirm('Reset Messages Sent to 0?')) return;
-  await sendToExtension('storageSet', { data: { [STORAGE_MESSAGES_KEY]: 0 } }).catch(() => {});
-  messageCounterEl.textContent = 'Messages Sent: 0';
+  await updateMessageDisplay(0);
 });
 
 // ===== Log =====
