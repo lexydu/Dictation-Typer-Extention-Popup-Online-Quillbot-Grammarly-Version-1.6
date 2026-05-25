@@ -28,6 +28,7 @@ const decreaseBtn      = document.getElementById('decreaseBtn');
 const resetBtn         = document.getElementById('resetBtn');
 const clearTextBtn     = document.getElementById('clearTextBtn');
 const writingIssuesEl  = document.getElementById('writingIssues');
+const writingIssuesTitleEl = writingIssuesEl.querySelector('.writing-issues-title');
 const writingIssuesListEl = document.getElementById('writingIssuesList');
 const setTargetBtn     = document.getElementById('setTargetBtn');
 const targetLabelEl    = document.getElementById('targetLabel');
@@ -49,6 +50,7 @@ const emojiPanel = document.getElementById('emojiPanel');
 let extensionConnected = false;
 let lastTypedText = '';
 let requestCounter = 0;
+let lastResolvedWritingIssue = '';
 const pendingRequests = {};
 
 // ===== Bridge communication =====
@@ -207,12 +209,27 @@ function renderWritingIssues() {
   const issues = getWritingIssues(mainTextEl.value);
 
   if (!issues.length) {
-    writingIssuesEl.style.display = 'none';
-    writingIssuesListEl.innerHTML = '';
+    if (lastResolvedWritingIssue) {
+      writingIssuesEl.style.display = 'block';
+      writingIssuesEl.classList.remove('writing-issues-warning');
+      writingIssuesEl.classList.add('writing-issues-success');
+      writingIssuesTitleEl.textContent = 'No issue found';
+      writingIssuesListEl.innerHTML = '';
+
+      const li = document.createElement('li');
+      li.textContent = lastResolvedWritingIssue + ' is fixed.';
+      writingIssuesListEl.appendChild(li);
+    } else {
+      writingIssuesEl.style.display = 'none';
+      writingIssuesListEl.innerHTML = '';
+    }
+
     mainTextEl.classList.remove('has-writing-issues');
     return;
   }
 
+  lastResolvedWritingIssue = issues[0];
+  writingIssuesTitleEl.textContent = 'Writing issues found';
   writingIssuesListEl.innerHTML = '';
   issues.forEach(issue => {
     const li = document.createElement('li');
@@ -221,6 +238,8 @@ function renderWritingIssues() {
   });
 
   writingIssuesEl.style.display = 'block';
+  writingIssuesEl.classList.remove('writing-issues-success');
+  writingIssuesEl.classList.add('writing-issues-warning');
   mainTextEl.classList.add('has-writing-issues');
 }
 
