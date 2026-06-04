@@ -324,7 +324,27 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 .log-list { max-height: 260px; overflow-y: auto; margin-bottom: 10px; }
 .log-entry { border-bottom: 1px solid #f0f2f4; padding: 8px 0; }
 .log-entry:last-child { border-bottom: none; }
+.log-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
 .log-meta { font-size: 10px; color: #aaa; margin-bottom: 3px; }
+.log-meta-row .log-meta { margin-bottom: 0; }
+.log-copy-btn {
+  border: 1px solid #e0e4e8;
+  border-radius: 6px;
+  background: white;
+  color: #555;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  flex-shrink: 0;
+}
+.log-copy-btn:hover { background: #f4f6f8; color: #222; }
 .log-text { font-size: 12px; color: #333; word-break: break-word; white-space: pre-wrap; line-height: 1.5; }
 .log-empty { font-size: 12px; color: #aaa; text-align: center; padding: 14px 0; }
 .log-actions { display: flex; gap: 8px; }
