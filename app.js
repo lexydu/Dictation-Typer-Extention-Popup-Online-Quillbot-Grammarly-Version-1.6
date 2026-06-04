@@ -86,11 +86,10 @@ window.addEventListener('message', (event) => {
   if (msg.action === 'finishedTyping') {
     setMessageCountDisplay(msg.count);
     if (lastTypedText) {
-      saveToLog(lastTypedText);
-      mainTextEl.value = '';
-      updateCharCounter();
-      sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: '' } }).catch(() => {});
+      const typedText = lastTypedText;
+      clearTypedMessageBox();
       lastTypedText = '';
+      saveToLog(typedText);
     }
     startBtn.disabled = false;
     stopBtn.disabled = true;
@@ -154,6 +153,14 @@ function updateCharCounter() {
   charCounterEl.textContent = len + ' / ' + MAX_CHARS;
   charCounterEl.style.color = len > MAX_CHARS ? 'red' : '#888';
 }
+
+function clearTypedMessageBox() {
+  mainTextEl.value = '';
+  updateCharCounter();
+  mainTextEl.dispatchEvent(new Event('input', { bubbles: true }));
+  sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: '' } }).catch(() => {});
+}
+
 mainTextEl.addEventListener('input', () => {
   updateCharCounter();
   sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
@@ -420,8 +427,37 @@ function renderLog(log) {
   log.forEach((entry, i) => {
     const div = document.createElement('div');
     div.className = 'log-entry';
-    div.innerHTML = '<div class="log-meta">#' + (log.length - i) + ' — ' + new Date(entry.timestamp).toLocaleString() + '</div>' +
-      '<div class="log-text">' + entry.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+
+    const meta = document.createElement('div');
+    meta.className = 'log-meta';
+    meta.textContent = '#' + (log.length - i) + ' - ' + new Date(entry.timestamp).toLocaleString();
+
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'log-copy-btn';
+    copyButton.textContent = 'Copy';
+    copyButton.title = 'Copy this message';
+    copyButton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(entry.text || '');
+        copyButton.textContent = 'Copied';
+        setTimeout(() => { copyButton.textContent = 'Copy'; }, 1400);
+      } catch (e) {
+        showAlert('Could not copy message. Please try again.');
+      }
+    });
+
+    const metaRow = document.createElement('div');
+    metaRow.className = 'log-meta-row';
+    metaRow.appendChild(meta);
+    metaRow.appendChild(copyButton);
+
+    const text = document.createElement('div');
+    text.className = 'log-text';
+    text.textContent = entry.text || '';
+
+    div.appendChild(metaRow);
+    div.appendChild(text);
     logListEl.appendChild(div);
   });
 }
