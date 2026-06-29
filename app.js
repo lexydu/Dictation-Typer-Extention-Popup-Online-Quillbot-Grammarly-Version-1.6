@@ -421,10 +421,10 @@ startBtn.addEventListener('click', async () => {
   lastTypedText = text;
   let delayRange;
   const speed = speedSelect.value;
-  if (speed === 'superfast') delayRange = [2, 2];
-  else if (speed === 'fast') delayRange = [4, 4];
-  else if (speed === 'normal') delayRange = [8, 8];
-  else delayRange = [15, 15];
+  if (speed === 'superfast') delayRange = [4, 8];
+  else if (speed === 'fast') delayRange = [8, 10];
+  else if (speed === 'normal') delayRange = [50, 200];
+  else delayRange = [100, 400];
 
   startBtn.disabled = true;
   stopBtn.disabled = false;
