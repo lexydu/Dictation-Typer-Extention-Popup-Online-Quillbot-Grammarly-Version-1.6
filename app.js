@@ -165,10 +165,31 @@ mainTextEl.addEventListener('input', () => {
 function getTextSelectionRange() {
   const start = mainTextEl.selectionStart ?? 0;
   const end = mainTextEl.selectionEnd ?? 0;
-  if (end > start) {
-    return { start, end };
-  }
-  return { start: 0, end: mainTextEl.value.length };
+  return { start, end };
+}
+
+function getSelectedText() {
+  const { start, end } = getTextSelectionRange();
+  const value = mainTextEl.value || '';
+  const hasSelection = end > start;
+  return {
+    start,
+    end,
+    hasSelection,
+    text: hasSelection ? value.slice(start, end) : value
+  };
+}
+
+function replaceSelectedText(replacementText) {
+  const { start, end } = getTextSelectionRange();
+  const value = mainTextEl.value || '';
+  const nextValue = value.slice(0, start) + replacementText + value.slice(end);
+  const nextPos = start + replacementText.length;
+  mainTextEl.value = nextValue;
+  mainTextEl.focus();
+  mainTextEl.setSelectionRange(nextPos, nextPos);
+  updateCharCounter();
+  return nextValue;
 }
 
 async function copyToClipboard(text) {
@@ -212,13 +233,7 @@ async function handlePasteText() {
       return;
     }
 
-    const start = mainTextEl.selectionStart ?? mainTextEl.value.length;
-    const end = mainTextEl.selectionEnd ?? mainTextEl.value.length;
-    mainTextEl.value = mainTextEl.value.slice(0, start) + text + mainTextEl.value.slice(end);
-    const nextPos = start + text.length;
-    mainTextEl.focus();
-    mainTextEl.setSelectionRange(nextPos, nextPos);
-    updateCharCounter();
+    replaceSelectedText(text);
     await syncSavedText();
     showAlert('Text pasted!');
   } catch (err) {
@@ -227,21 +242,18 @@ async function handlePasteText() {
 }
 
 async function handleCopyText() {
-  const { start, end } = getTextSelectionRange();
-  const text = mainTextEl.value.slice(start, end);
+  const { text } = getSelectedText();
   if (!text) {
     showAlert('Nothing to copy.');
     return;
   }
 
   const copied = await copyToClipboard(text);
-  if (copied) showAlert('?? Text copied!');
-  else showAlert('?? Copy failed.');
+  showAlert(copied ? 'Text copied!' : 'Copy failed.');
 }
 
 async function handleCutText() {
-  const { start, end } = getTextSelectionRange();
-  const text = mainTextEl.value.slice(start, end);
+  const { text } = getSelectedText();
   if (!text) {
     showAlert('Nothing to cut.');
     return;
@@ -249,16 +261,13 @@ async function handleCutText() {
 
   const copied = await copyToClipboard(text);
   if (!copied) {
-    showAlert('?? Cut failed while copying.');
+    showAlert('Cut failed.');
     return;
   }
 
-  mainTextEl.value = mainTextEl.value.slice(0, start) + mainTextEl.value.slice(end);
-  mainTextEl.focus();
-  mainTextEl.setSelectionRange(start, start);
-  updateCharCounter();
+  replaceSelectedText('');
   await syncSavedText();
-  showAlert('?? Text cut!');
+  showAlert('Text cut!');
 }
 
 // ===== Load saved state =====
@@ -323,14 +332,9 @@ setTargetBtn.addEventListener('click', async () => {
 
     try {
       const res = await sendToExtension('getAllTabs');
-      if (!res.success) { showAlert('Could not get tabs. Try again.'); return; }
-
-      const pageUrl = window.location.href;
-    const candidates = res.tabs.filter(t =>
-      t.url &&
-      !t.url.includes('https://lexydu.github.io/Dictation-Typer-Extention-Popup-Online-Quillbot-Grammarly-Version-1.6') &&
-      !t.url.startsWith('chrome://') &&
-      !t.url.startsWith('chrome-extension://') &&
+      if (!res.success) { showAlert('Could not get tabs. Try again.'); return; }      const candidates = res.tabs.filter(t =>
+        t.url &&
+        !t.url.includes('https://lexydu.github.io/Dictation-Typer-Extention-Popup-Online-Quillbot-Grammarly-Version-1.6') &&
         !t.url.startsWith('chrome://') &&
         !t.url.startsWith('chrome-extension://')
       );
@@ -417,10 +421,10 @@ startBtn.addEventListener('click', async () => {
   lastTypedText = text;
   let delayRange;
   const speed = speedSelect.value;
-  if (speed === 'superfast') delayRange = [4, 8];
-  else if (speed === 'fast') delayRange = [8, 10];
-  else if (speed === 'normal') delayRange = [50, 200];
-  else delayRange = [100, 400];
+  if (speed === 'superfast') delayRange = [2, 2];
+  else if (speed === 'fast') delayRange = [4, 4];
+  else if (speed === 'normal') delayRange = [8, 8];
+  else delayRange = [15, 15];
 
   startBtn.disabled = true;
   stopBtn.disabled = false;
@@ -469,6 +473,7 @@ stopBtn.addEventListener('click', async () => {
 pasteTextBtn.addEventListener('click', async () => {
   await handlePasteText();
 });
+
 copyTextBtn.addEventListener('click', async () => {
   await handleCopyText();
 });
@@ -657,6 +662,9 @@ document.addEventListener('click', (e) => {
 });
 
 updateCharCounter();
+
+
+
 
 
 
