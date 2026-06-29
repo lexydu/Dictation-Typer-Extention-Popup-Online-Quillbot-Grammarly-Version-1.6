@@ -538,8 +538,31 @@ function renderLog(log) {
   log.forEach((entry, i) => {
     const div = document.createElement('div');
     div.className = 'log-entry';
-    div.innerHTML = '<div class="log-meta">#' + (log.length - i) + ' — ' + new Date(entry.timestamp).toLocaleString() + '</div>' +
-      '<div class="log-text">' + entry.text.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+
+    const meta = document.createElement('div');
+    meta.className = 'log-meta';
+    meta.textContent = '#' + (log.length - i) + ' � ' + new Date(entry.timestamp).toLocaleString();
+
+    const text = document.createElement('div');
+    text.className = 'log-text';
+    text.textContent = entry.text;
+
+    const actions = document.createElement('div');
+    actions.className = 'log-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'log-btn log-copy';
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', async () => {
+      const copied = await copyToClipboard(entry.text || '');
+      showAlert(copied ? 'Log text copied!' : 'Copy failed.');
+    });
+
+    actions.appendChild(copyBtn);
+    div.appendChild(meta);
+    div.appendChild(text);
+    div.appendChild(actions);
     logListEl.appendChild(div);
   });
 }
