@@ -167,11 +167,10 @@ mainTextEl.addEventListener('input', () => {
 function normalizeTextareaText(text) {
   return (text || '')
     .replace(/\r\n/g, '\n')
+    .replace(/\n+/g, ' ')
     .replace(/[ \t]{2,}/g, ' ')
-    .replace(/\n[ \t]+/g, '\n')
-    .replace(/[ \t]+\n/g, '\n')
     .replace(/\.([A-Za-z])/g, '. $1')
-    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
@@ -708,6 +707,7 @@ document.addEventListener('click', (e) => {
 });
 
 updateCharCounter();
+
 
 
 
