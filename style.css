@@ -172,8 +172,10 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-top: 8px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 .char-counter { font-size: 12px; color: #888; font-weight: 500; }
 .link-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
@@ -381,5 +383,7 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 
 /* Prevent overlap with emoji button */
 textarea { padding: 16px 16px 42px 44px; }
+
+
 
 
