@@ -31,6 +31,7 @@ const pasteTextBtn   = document.getElementById('pasteTextBtn');
 const copyTextBtn    = document.getElementById('copyTextBtn');
 const cutTextBtn     = document.getElementById('cutTextBtn');
 const clearTextBtn   = document.getElementById('clearTextBtn');
+const formatTextBtn  = document.getElementById('formatTextBtn');
 const setTargetBtn     = document.getElementById('setTargetBtn');
 const targetLabelEl    = document.getElementById('targetLabel');
 const toggleRulesBtn   = document.getElementById('toggleRules');
@@ -158,8 +159,6 @@ function updateCharCounter() {
   charCounterEl.style.color = len > MAX_CHARS ? 'red' : '#888';
 }
 mainTextEl.addEventListener('input', () => {
-  const nextCaret = sanitizeTextareaValue(mainTextEl);
-  mainTextEl.setSelectionRange(nextCaret, nextCaret);
   updateCharCounter();
   sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
 });
@@ -174,13 +173,13 @@ function normalizeTextareaText(text) {
     .trim();
 }
 
-function sanitizeTextareaValue(el) {
-  const current = el.value || '';
-  const caret = typeof el.selectionStart === 'number' ? el.selectionStart : current.length;
-  const cleanedValue = normalizeTextareaText(current);
-  const cleanedBeforeCaret = normalizeTextareaText(current.slice(0, caret));
-  el.value = cleanedValue;
-  return Math.min(cleanedBeforeCaret.length, cleanedValue.length);
+function applyFormattedText() {
+  const cleaned = normalizeTextareaText(mainTextEl.value);
+  mainTextEl.value = cleaned;
+  mainTextEl.focus();
+  mainTextEl.setSelectionRange(cleaned.length, cleaned.length);
+  updateCharCounter();
+  return cleaned;
 }
 
 function getTextSelectionRange() {
@@ -252,10 +251,7 @@ async function handlePasteText() {
     if (!text) {
       showAlert('Nothing to paste.');
       return;
-    }
-
-    replaceSelectedText(text);
-    sanitizeTextareaValue(mainTextEl);
+    }    replaceSelectedText(text);
     await syncSavedText();
     showAlert('Text pasted!');
   } catch (err) {
@@ -297,7 +293,7 @@ async function loadSavedState() {
   try {
     const res = await sendToExtension('storageGet', { keys: [STORAGE_TEXT_KEY, STORAGE_MESSAGES_KEY, STORAGE_LOG_KEY, STORAGE_RULES_KEY] });
     if (res.success && res.data) {
-      mainTextEl.value = normalizeTextareaText(res.data[STORAGE_TEXT_KEY] || '');
+      mainTextEl.value = res.data[STORAGE_TEXT_KEY] || '';
       setMessageCountDisplay(res.data[STORAGE_MESSAGES_KEY] || 0);
       updateCharCounter();
       renderLog(res.data[STORAGE_LOG_KEY] || []);
@@ -512,6 +508,17 @@ clearTextBtn.addEventListener('click', async () => {
   showAlert('Text cleared!');
 });
 
+formatTextBtn.addEventListener('click', async () => {
+  const original = mainTextEl.value || '';
+  const cleaned = applyFormattedText();
+  if (cleaned === original) {
+    showAlert('Text is already formatted.');
+    return;
+  }
+  await syncSavedText();
+  showAlert('Text formatted.');
+});
+
 // ===== Counter =====
 function normalizeMessageCount(val) {
   const number = Number(val);
@@ -707,6 +714,10 @@ document.addEventListener('click', (e) => {
 });
 
 updateCharCounter();
+
+
+
+
 
 
 
