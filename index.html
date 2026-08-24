@@ -23,6 +23,7 @@
       </div>
       <div class="header-right">
         <div id="statusPill" class="status-pill">Ready</div>
+        <button id="themeBtn" class="theme-btn" type="button" aria-label="Toggle dark mode">Dark</button>
       </div>
     </header>
 
@@ -76,26 +77,24 @@
   </div>
 </div>
 
-        <div class="textarea-footer">
-          <span id="charCounter" class="char-counter">0 / 200</span>
-          <div class="text-actions">
-            <button id="pasteTextBtn" class="link-btn" type="button">Paste text</button>
-            <button id="copyTextBtn" class="link-btn" type="button">Copy text</button>
-            <button id="cutTextBtn" class="link-btn" type="button">Cut text</button>
-            <button id="formatTextBtn" class="link-btn" type="button">Format text</button>
-            <button id="clearTextBtn" class="link-btn" type="button">Clear text</button>
-          </div>
-        </div>
+<div class="textarea-footer">
+  <span id="charCounter" class="char-counter">0 / 200</span>
+  <span id="wordCounter" class="word-counter">0 words</span>
+  <span id="saveStatus" class="save-status" aria-live="polite"></span>
+  <button id="clearTextBtn" class="link-btn">Clear text</button>
+</div>
 
         <!-- Controls -->
         <div class="controls-row">
           <div class="control-group">
             <label class="control-label" for="speedSelect">Typing Speed</label>
             <select id="speedSelect" class="select-input">
-              <option value="superfast" selected>Super Fast</option>
+               <option value="instant">Instant</option>
+               <option value="superfast" selected>Super Fast</option>
               <option value="fast">Fast</option>
               <option value="normal">Normal</option>
-              <option value="slow">Slow</option>
+               <option value="slow">Slow</option>
+               <option value="veryslow">Very Slow</option>
             </select>
           </div>
           <div class="control-group check-group">
@@ -146,6 +145,11 @@
               <input id="newRuleInput" type="text" placeholder="Add a banned phrase..." maxlength="100" class="rule-input" />
               <button id="addRuleBtn" class="rule-add-btn">Add</button>
             </div>
+            <div class="rule-actions">
+              <button id="exportRulesBtn" class="log-btn">Export Rules</button>
+              <button id="importRulesBtn" class="log-btn">Import Rules</button>
+              <input id="importRulesInput" type="file" accept="application/json,.json" hidden>
+            </div>
           </div>
         </div>
 
@@ -156,9 +160,11 @@
             <button class="toggle-btn" id="toggleLog">▼</button>
           </div>
           <div id="logSection">
+            <input id="logSearchInput" class="log-search" type="search" placeholder="Search messages..." aria-label="Search messages">
             <div id="logList" class="log-list"></div>
             <div class="log-actions">
               <button id="exportLogBtn" class="log-btn">⬇ Export .txt</button>
+              <button id="copyAllLogBtn" class="log-btn">Copy All</button>
               <button id="clearLogBtn" class="log-btn log-clear">🗑 Clear Log</button>
             </div>
           </div>
@@ -171,12 +177,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
