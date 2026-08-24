@@ -43,6 +43,9 @@ body {
   border-bottom: 1px solid #e0e4e8;
 }
 .header-left { display: flex; align-items: center; gap: 14px; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.theme-btn { padding: 5px 10px; border: 1px solid #e0e4e8; border-radius: 7px; background: white; color: #444; cursor: pointer; font-size: 11px; }
+.theme-btn:hover { background: #f4f6f8; }
 .logo-dot { width: 14px; height: 14px; border-radius: 50%; background: #007946; flex-shrink: 0; }
 .header h1 { font-size: 20px; font-weight: 600; color: #111; letter-spacing: -0.3px; }
 .header-sub { font-weight: 400; color: #888; font-size: 17px; }
@@ -172,14 +175,13 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
   margin-top: 8px;
   margin-bottom: 20px;
-  flex-wrap: wrap;
 }
 .char-counter { font-size: 12px; color: #888; font-weight: 500; }
+.word-counter, .save-status { font-size: 12px; color: #888; font-weight: 500; }
+.save-status { color: #007946; }
 .link-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
-.text-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
 .link-btn:hover { color: #333; }
 
 /* ===== CONTROLS ===== */
@@ -322,15 +324,38 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 .rule-input:focus { outline: none; border-color: #007946; }
 .rule-add-btn { padding: 7px 12px; font-size: 12px; background: #007946; color: white; border: none; border-radius: 7px; cursor: pointer; font-weight: 600; flex-shrink: 0; }
 .rule-add-btn:hover { background: #006038; }
+.rule-actions { display: flex; gap: 8px; margin-top: 8px; }
 
 /* ===== LOG ===== */
 .log-list { max-height: 260px; overflow-y: auto; margin-bottom: 10px; }
 .log-entry { border-bottom: 1px solid #f0f2f4; padding: 8px 0; }
 .log-entry:last-child { border-bottom: none; }
+.log-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
 .log-meta { font-size: 10px; color: #aaa; margin-bottom: 3px; }
+.log-meta-row .log-meta { margin-bottom: 0; }
+.log-copy-btn {
+  border: 1px solid #e0e4e8;
+  border-radius: 6px;
+  background: white;
+  color: #555;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  flex-shrink: 0;
+}
+.log-copy-btn:hover { background: #f4f6f8; color: #222; }
 .log-text { font-size: 12px; color: #333; word-break: break-word; white-space: pre-wrap; line-height: 1.5; }
 .log-empty { font-size: 12px; color: #aaa; text-align: center; padding: 14px 0; }
 .log-actions { display: flex; gap: 8px; }
+.log-search { width: 100%; padding: 7px 10px; margin-bottom: 10px; border: 1.5px solid #e0e4e8; border-radius: 7px; font: inherit; font-size: 12px; }
+.log-search:focus { outline: none; border-color: #007946; }
 .log-btn { flex: 1; padding: 7px; font-size: 12px; border: none; border-radius: 7px; cursor: pointer; font-weight: 500; background: #007946; color: white; }
 .log-btn:hover { background: #006038; }
 .log-clear { background: #888; }
@@ -384,6 +409,14 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 /* Prevent overlap with emoji button */
 textarea { padding: 16px 16px 42px 44px; }
 
-
-
-
+body.dark { background: #18201e; color: #e8efec; }
+body.dark .header { border-color: #34413d; }
+body.dark .header h1, body.dark .header-sub { color: #e8efec; }
+body.dark .writing-panel, body.dark .sidebar-card, body.dark .theme-btn,
+body.dark .select-input, body.dark .count-input, body.dark .count-btn,
+body.dark .log-copy-btn { background: #24302c; color: #e8efec; border-color: #40504a; }
+body.dark .target-row, body.dark textarea, body.dark .rule-locked { background: #202a27; color: #e8efec; border-color: #40504a; }
+body.dark textarea::placeholder, body.dark .target-instructions, body.dark .control-label,
+body.dark .panel-label, body.dark .char-counter, body.dark .word-counter { color: #aab8b1; }
+body.dark .log-entry { border-color: #34413d; }
+body.dark .log-text, body.dark .checkbox-label, body.dark .card-title { color: #d6e0da; }
