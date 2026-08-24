@@ -10,11 +10,16 @@ const STORAGE_MESSAGES_KEY = 'dictation_messages_sent';
 const STORAGE_LOG_KEY      = 'dictation_message_log';
 const STORAGE_RULES_KEY    = 'dictation_custom_rules';
 const STORAGE_TARGET_TAB   = 'dictation_target_tab';
+const STORAGE_SPEED_KEY    = 'dictation_speed';
+const STORAGE_APPEND_KEY   = 'dictation_append_mode';
+const STORAGE_THEME_KEY    = 'dictation_theme';
 const MAX_CHARS            = 200;
 
 // ===== Element references =====
 const mainTextEl       = document.getElementById('mainText');
 const charCounterEl    = document.getElementById('charCounter');
+const wordCounterEl    = document.getElementById('wordCounter');
+const saveStatusEl     = document.getElementById('saveStatus');
 const startBtn         = document.getElementById('startBtn');
 const stopBtn          = document.getElementById('stopBtn');
 const speedSelect      = document.getElementById('speedSelect');
@@ -27,11 +32,7 @@ const messageCountInputEl = document.getElementById('messageCountInput');
 const increaseBtn      = document.getElementById('increaseBtn');
 const decreaseBtn      = document.getElementById('decreaseBtn');
 const resetBtn         = document.getElementById('resetBtn');
-const pasteTextBtn   = document.getElementById('pasteTextBtn');
-const copyTextBtn    = document.getElementById('copyTextBtn');
-const cutTextBtn     = document.getElementById('cutTextBtn');
-const clearTextBtn   = document.getElementById('clearTextBtn');
-const formatTextBtn  = document.getElementById('formatTextBtn');
+const clearTextBtn     = document.getElementById('clearTextBtn');
 const setTargetBtn     = document.getElementById('setTargetBtn');
 const targetLabelEl    = document.getElementById('targetLabel');
 const toggleRulesBtn   = document.getElementById('toggleRules');
@@ -48,6 +49,12 @@ const extStatusEl      = document.getElementById('extStatus');
 const notConnectedBanner = document.getElementById('notConnectedBanner');
 const emojiBtn = document.getElementById('emojiBtn');
 const emojiPanel = document.getElementById('emojiPanel');
+const themeBtn = document.getElementById('themeBtn');
+const logSearchInput = document.getElementById('logSearchInput');
+const copyAllLogBtn = document.getElementById('copyAllLogBtn');
+const exportRulesBtn = document.getElementById('exportRulesBtn');
+const importRulesBtn = document.getElementById('importRulesBtn');
+const importRulesInput = document.getElementById('importRulesInput');
 
 let extensionConnected = false;
 let lastTypedText = '';
@@ -90,15 +97,25 @@ window.addEventListener('message', (event) => {
   if (msg.action === 'finishedTyping') {
     setMessageCountDisplay(msg.count);
     if (lastTypedText) {
-      saveToLog(lastTypedText);
-      mainTextEl.value = '';
-      updateCharCounter();
-      sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: '' } }).catch(() => {});
+      const typedText = lastTypedText;
+      clearTypedMessageBox();
       lastTypedText = '';
+      saveToLog(typedText);
     }
     startBtn.disabled = false;
     stopBtn.disabled = true;
     scheduleStatusFade();
+    return;
+  }
+
+  if (msg.action === 'typingProgress') {
+    typingIndicator.style.display = 'block';
+    typingIndicator.textContent = 'Typing... ' + Math.round(msg.percent || 0) + '%';
+    return;
+  }
+
+  if (msg.action === 'shortcutStartTyping') {
+    startBtn.click();
     return;
   }
 
@@ -157,147 +174,72 @@ function updateCharCounter() {
   const len = mainTextEl.value.length;
   charCounterEl.textContent = len + ' / ' + MAX_CHARS;
   charCounterEl.style.color = len > MAX_CHARS ? 'red' : '#888';
+  const words = mainTextEl.value.trim() ? mainTextEl.value.trim().split(/\s+/).length : 0;
+  wordCounterEl.textContent = words + (words === 1 ? ' word' : ' words');
 }
+
+function showRelockAlert(msg) {
+  showAlert(msg);
+  const relockBtn = document.createElement('button');
+  relockBtn.type = 'button';
+  relockBtn.textContent = 'Relock now';
+  relockBtn.style.marginLeft = '10px';
+  relockBtn.addEventListener('click', () => {
+    pageAlertEl.style.display = 'none';
+    setTargetBtn.click();
+  });
+  pageAlertEl.appendChild(relockBtn);
+}
+
+function clearTypedMessageBox() {
+  mainTextEl.value = '';
+  updateCharCounter();
+  mainTextEl.dispatchEvent(new Event('input', { bubbles: true }));
+  sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: '' } }).catch(() => {});
+}
+
 mainTextEl.addEventListener('input', () => {
   updateCharCounter();
-  sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
+  sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).then(() => {
+    saveStatusEl.textContent = 'Saved';
+    clearTimeout(saveStatusEl._timer);
+    saveStatusEl._timer = setTimeout(() => { saveStatusEl.textContent = ''; }, 1200);
+  }).catch(() => {});
 });
 
-function normalizeTextareaText(text) {
-  return (text || '')
-    .replace(/\r\n/g, '\n')
-    .replace(/\n+/g, ' ')
-    .replace(/[ \t]{2,}/g, ' ')
-    .replace(/\.([A-Za-z])/g, '. $1')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
+speedSelect.addEventListener('change', () => {
+  sendToExtension('storageSet', { data: { [STORAGE_SPEED_KEY]: speedSelect.value } }).catch(() => {});
+});
+
+appendMode.addEventListener('change', () => {
+  sendToExtension('storageSet', { data: { [STORAGE_APPEND_KEY]: appendMode.checked } }).catch(() => {});
+});
+
+function applyTheme(theme) {
+  document.body.classList.toggle('dark', theme === 'dark');
+  themeBtn.textContent = theme === 'dark' ? 'Light' : 'Dark';
 }
 
-function applyFormattedText() {
-  const cleaned = normalizeTextareaText(mainTextEl.value);
-  mainTextEl.value = cleaned;
-  mainTextEl.focus();
-  mainTextEl.setSelectionRange(cleaned.length, cleaned.length);
-  updateCharCounter();
-  return cleaned;
-}
-
-function getTextSelectionRange() {
-  const start = mainTextEl.selectionStart ?? 0;
-  const end = mainTextEl.selectionEnd ?? 0;
-  return { start, end };
-}
-
-function getSelectedText() {
-  const { start, end } = getTextSelectionRange();
-  const value = mainTextEl.value || '';
-  const hasSelection = end > start;
-  return {
-    start,
-    end,
-    hasSelection,
-    text: hasSelection ? value.slice(start, end) : value
-  };
-}
-
-function replaceSelectedText(replacementText) {
-  const { start, end } = getTextSelectionRange();
-  const value = mainTextEl.value || '';
-  const nextValue = value.slice(0, start) + replacementText + value.slice(end);
-  const nextPos = start + replacementText.length;
-  mainTextEl.value = nextValue;
-  mainTextEl.focus();
-  mainTextEl.setSelectionRange(nextPos, nextPos);
-  updateCharCounter();
-  return nextValue;
-}
-
-async function copyToClipboard(text) {
-  if (!text) return false;
-
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch (err) {
-    const temp = document.createElement('textarea');
-    temp.value = text;
-    temp.setAttribute('readonly', '');
-    temp.style.position = 'fixed';
-    temp.style.left = '-9999px';
-    temp.style.top = '0';
-    document.body.appendChild(temp);
-    temp.focus();
-    temp.select();
-
-    let copied = false;
-    try {
-      copied = document.execCommand('copy');
-    } catch (copyErr) {
-      copied = false;
-    }
-
-    temp.remove();
-    return copied;
-  }
-}
-
-async function syncSavedText() {
-  await sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
-}
-
-async function handlePasteText() {
-  try {
-    const text = await navigator.clipboard.readText();
-    if (!text) {
-      showAlert('Nothing to paste.');
-      return;
-    }    replaceSelectedText(text);
-    await syncSavedText();
-    showAlert('Text pasted!');
-  } catch (err) {
-    showAlert('Paste failed.');
-  }
-}
-
-async function handleCopyText() {
-  const { text } = getSelectedText();
-  if (!text) {
-    showAlert('Nothing to copy.');
-    return;
-  }
-
-  const copied = await copyToClipboard(text);
-  showAlert(copied ? 'Text copied!' : 'Copy failed.');
-}
-
-async function handleCutText() {
-  const { text } = getSelectedText();
-  if (!text) {
-    showAlert('Nothing to cut.');
-    return;
-  }
-
-  const copied = await copyToClipboard(text);
-  if (!copied) {
-    showAlert('Cut failed.');
-    return;
-  }
-
-  replaceSelectedText('');
-  await syncSavedText();
-  showAlert('Text cut!');
-}
+themeBtn.addEventListener('click', () => {
+  const theme = document.body.classList.contains('dark') ? 'light' : 'dark';
+  applyTheme(theme);
+  sendToExtension('storageSet', { data: { [STORAGE_THEME_KEY]: theme } }).catch(() => {});
+});
 
 // ===== Load saved state =====
 async function loadSavedState() {
   try {
-    const res = await sendToExtension('storageGet', { keys: [STORAGE_TEXT_KEY, STORAGE_MESSAGES_KEY, STORAGE_LOG_KEY, STORAGE_RULES_KEY] });
+    const res = await sendToExtension('storageGet', { keys: [STORAGE_TEXT_KEY, STORAGE_MESSAGES_KEY, STORAGE_LOG_KEY, STORAGE_RULES_KEY, STORAGE_SPEED_KEY, STORAGE_APPEND_KEY, STORAGE_THEME_KEY] });
     if (res.success && res.data) {
       mainTextEl.value = res.data[STORAGE_TEXT_KEY] || '';
       setMessageCountDisplay(res.data[STORAGE_MESSAGES_KEY] || 0);
       updateCharCounter();
       renderLog(res.data[STORAGE_LOG_KEY] || []);
       renderCustomRules(res.data[STORAGE_RULES_KEY] || []);
+      if (res.data[STORAGE_SPEED_KEY]) speedSelect.value = res.data[STORAGE_SPEED_KEY];
+      appendMode.checked = res.data[STORAGE_APPEND_KEY] === true;
+      applyTheme(res.data[STORAGE_THEME_KEY] || 'light');
+      if (mainTextEl.value) showAlert('Draft restored');
     }
     await refreshTargetLabel();
   } catch (e) { console.error('loadSavedState', e); }
@@ -350,9 +292,14 @@ setTargetBtn.addEventListener('click', async () => {
 
     try {
       const res = await sendToExtension('getAllTabs');
-      if (!res.success) { showAlert('Could not get tabs. Try again.'); return; }      const candidates = res.tabs.filter(t =>
-        t.url &&
-        !t.url.includes('https://lexydu.github.io/Dictation-Typer-Extention-Popup-Online-Quillbot-Grammarly-Version-1.6') &&
+      if (!res.success) { showAlert('Could not get tabs. Try again.'); return; }
+
+      const pageUrl = window.location.href;
+    const candidates = res.tabs.filter(t =>
+      t.url &&
+      !t.url.includes('https://lexydu.github.io/Dictation-Typer-Extention-Popup-Online-Quillbot-Grammarly-Version-1.6') &&
+      !t.url.startsWith('chrome://') &&
+      !t.url.startsWith('chrome-extension://') &&
         !t.url.startsWith('chrome://') &&
         !t.url.startsWith('chrome-extension://')
       );
@@ -439,10 +386,12 @@ startBtn.addEventListener('click', async () => {
   lastTypedText = text;
   let delayRange;
   const speed = speedSelect.value;
-  if (speed === 'superfast') delayRange = [4, 8];
+   if (speed === 'instant') delayRange = [0, 2];
+   else if (speed === 'superfast') delayRange = [4, 10];
   else if (speed === 'fast') delayRange = [8, 10];
   else if (speed === 'normal') delayRange = [50, 200];
-  else delayRange = [100, 400];
+   else if (speed === 'slow') delayRange = [100, 400];
+   else delayRange = [300, 800];
 
   startBtn.disabled = true;
   stopBtn.disabled = false;
@@ -453,7 +402,8 @@ startBtn.addEventListener('click', async () => {
     if (!res.success) {
       // Show the specific error message from background.js
       const errorMsg = res.message || 'Failed to type. Try relocking your tab.';
-      showAlert('⚠️ ' + errorMsg);
+        if (res.error === 'TAB_CLOSED' || res.error === 'NO_LOCK') showRelockAlert('⚠️ ' + errorMsg);
+        else showAlert('⚠️ ' + errorMsg);
 
       // If lock is stale, clear it from UI too
       if (res.error === 'TAB_CLOSED' || res.error === 'NO_LOCK') {
@@ -487,36 +437,13 @@ stopBtn.addEventListener('click', async () => {
   scheduleStatusFade();
 });
 
-// ===== Paste / Copy / Cut / Clear text =====
-pasteTextBtn.addEventListener('click', async () => {
-  await handlePasteText();
-});
-
-copyTextBtn.addEventListener('click', async () => {
-  await handleCopyText();
-});
-
-cutTextBtn.addEventListener('click', async () => {
-  await handleCutText();
-});
-
+// ===== Clear text =====
 clearTextBtn.addEventListener('click', async () => {
   if (!confirm('Clear all saved text?')) return;
   mainTextEl.value = '';
   updateCharCounter();
-  await syncSavedText();
-  showAlert('Text cleared!');
-});
-
-formatTextBtn.addEventListener('click', async () => {
-  const original = mainTextEl.value || '';
-  const cleaned = applyFormattedText();
-  if (cleaned === original) {
-    showAlert('Text is already formatted.');
-    return;
-  }
-  await syncSavedText();
-  showAlert('Text formatted.');
+  await sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: '' } }).catch(() => {});
+  showAlert('✔️ Text cleared!');
 });
 
 // ===== Counter =====
@@ -561,39 +488,60 @@ resetBtn.addEventListener('click', async () => {
 });
 
 // ===== Log =====
-function renderLog(log) {
+function renderLog(log, query = logSearchInput.value.trim().toLowerCase()) {
   logListEl.innerHTML = '';
-  if (!log || !log.length) { logListEl.innerHTML = '<div class="log-empty">No messages logged yet.</div>'; return; }
-  log.forEach((entry, i) => {
+  const entries = (log || []).map((entry, i) => ({ entry, i })).filter(({ entry }) => !query || (entry.text || '').toLowerCase().includes(query));
+  if (!entries.length) { logListEl.innerHTML = '<div class="log-empty">No matching messages.</div>'; return; }
+  entries.forEach(({ entry, i }) => {
     const div = document.createElement('div');
     div.className = 'log-entry';
 
     const meta = document.createElement('div');
     meta.className = 'log-meta';
-    meta.textContent = '#' + (log.length - i) + ' � ' + new Date(entry.timestamp).toLocaleString();
+    meta.textContent = '#' + (log.length - i) + ' - ' + new Date(entry.timestamp).toLocaleString();
+
+    const copyButton = document.createElement('button');
+    copyButton.type = 'button';
+    copyButton.className = 'log-copy-btn';
+    copyButton.textContent = 'Copy';
+    copyButton.title = 'Copy this message';
+    copyButton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(entry.text || '');
+        copyButton.textContent = 'Copied';
+        setTimeout(() => { copyButton.textContent = 'Copy'; }, 1400);
+      } catch (e) {
+        showAlert('Could not copy message. Please try again.');
+      }
+    });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'log-copy-btn log-delete-btn';
+    deleteButton.textContent = 'Delete';
+    deleteButton.addEventListener('click', () => removeLogEntry(i));
+
+    const metaRow = document.createElement('div');
+    metaRow.className = 'log-meta-row';
+    metaRow.appendChild(meta);
+    metaRow.appendChild(copyButton);
+    metaRow.appendChild(deleteButton);
 
     const text = document.createElement('div');
     text.className = 'log-text';
-    text.textContent = entry.text;
+    text.textContent = entry.text || '';
 
-    const actions = document.createElement('div');
-    actions.className = 'log-actions';
-
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.className = 'log-btn log-copy';
-    copyBtn.textContent = 'Copy';
-    copyBtn.addEventListener('click', async () => {
-      const copied = await copyToClipboard(entry.text || '');
-      showAlert(copied ? 'Log text copied!' : 'Copy failed.');
-    });
-
-    actions.appendChild(copyBtn);
-    div.appendChild(meta);
+    div.appendChild(metaRow);
     div.appendChild(text);
-    div.appendChild(actions);
     logListEl.appendChild(div);
   });
+}
+async function removeLogEntry(index) {
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_LOG_KEY] });
+  const log = (res.success && res.data && res.data[STORAGE_LOG_KEY]) || [];
+  log.splice(index, 1);
+  await sendToExtension('storageSet', { data: { [STORAGE_LOG_KEY]: log } });
+  renderLog(log);
 }
 async function saveToLog(text) {
   try {
@@ -625,6 +573,21 @@ clearLogBtn.addEventListener('click', async () => {
   await sendToExtension('storageSet', { data: { [STORAGE_LOG_KEY]: [] } }).catch(() => {});
   renderLog([]);
   showAlert('✔️ Log cleared!');
+});
+
+logSearchInput.addEventListener('input', async () => {
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_LOG_KEY] }).catch(() => null);
+  renderLog((res && res.data && res.data[STORAGE_LOG_KEY]) || []);
+});
+
+copyAllLogBtn.addEventListener('click', async () => {
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_LOG_KEY] }).catch(() => null);
+  const log = (res && res.data && res.data[STORAGE_LOG_KEY]) || [];
+  if (!log.length) { showAlert('No messages to copy.'); return; }
+  try {
+    await navigator.clipboard.writeText(log.map(entry => entry.text || '').join('\n\n'));
+    showAlert('Messages copied.');
+  } catch (e) { showAlert('Could not copy messages.'); }
 });
 
 // ===== Rules =====
@@ -670,6 +633,37 @@ addRuleBtnEl.addEventListener('click', async () => {
 
 newRuleInputEl.addEventListener('keydown', e => { if (e.key === 'Enter') addRuleBtnEl.click(); });
 
+exportRulesBtn.addEventListener('click', async () => {
+  const res = await sendToExtension('storageGet', { keys: [STORAGE_RULES_KEY] });
+  const rules = (res.success && res.data && res.data[STORAGE_RULES_KEY]) || [];
+  const blob = new Blob([JSON.stringify(rules, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dictation_rules.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+
+importRulesBtn.addEventListener('click', () => importRulesInput.click());
+importRulesInput.addEventListener('change', async () => {
+  const file = importRulesInput.files[0];
+  importRulesInput.value = '';
+  if (!file) return;
+  try {
+    const imported = JSON.parse(await file.text());
+    if (!Array.isArray(imported) || imported.some(rule => typeof rule !== 'string')) throw new Error('Invalid rules file');
+    const res = await sendToExtension('storageGet', { keys: [STORAGE_RULES_KEY] });
+    const current = (res.success && res.data && res.data[STORAGE_RULES_KEY]) || [];
+    const rules = [...current];
+    imported.forEach(rule => {
+      const phrase = rule.trim();
+      if (phrase && !rules.some(existing => existing.toLowerCase() === phrase.toLowerCase())) rules.push(phrase);
+    });
+    await sendToExtension('storageSet', { data: { [STORAGE_RULES_KEY]: rules } });
+    renderCustomRules(rules);
+    showAlert('Rules imported.');
+  } catch (e) { showAlert('Invalid rules file.'); }
+});
+
 // ===== Emoji Picker =====
 function insertAtCursor(el, text) {
   const start = el.selectionStart ?? el.value.length;
@@ -714,15 +708,3 @@ document.addEventListener('click', (e) => {
 });
 
 updateCharCounter();
-
-
-
-
-
-
-
-
-
-
-
-
