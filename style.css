@@ -48,7 +48,7 @@ body {
 .theme-btn:hover { background: #f4f6f8; }
 .logo-dot { width: 14px; height: 14px; border-radius: 50%; background: #007946; flex-shrink: 0; }
 .header h1 { font-size: 20px; font-weight: 600; color: #111; letter-spacing: -0.3px; }
-.header-sub { font-weight: 400; color: #888; font-size: 17px; }
+.header-sub { font-weight: 400; color: #888; font-size: 17px; white-space: nowrap; }
 
 .ext-status {
   font-size: 11px;
@@ -175,12 +175,14 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 8px;
   margin-bottom: 20px;
 }
 .char-counter { font-size: 12px; color: #888; font-weight: 500; }
 .word-counter, .save-status { font-size: 12px; color: #888; font-weight: 500; }
-.save-status { color: #007946; }
+.save-status { color: #007946; min-width: 42px; display: inline-block; }
 .link-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
 .link-btn:hover { color: #333; }
 
@@ -420,3 +422,12 @@ body.dark textarea::placeholder, body.dark .target-instructions, body.dark .cont
 body.dark .panel-label, body.dark .char-counter, body.dark .word-counter { color: #aab8b1; }
 body.dark .log-entry { border-color: #34413d; }
 body.dark .log-text, body.dark .checkbox-label, body.dark .card-title { color: #d6e0da; }
+body.dark .banner-warn { background: #3a3117; border-color: #8a6d1a; color: #e8d48a; }
+
+@media (max-width: 480px) {
+  .header { align-items: flex-start; gap: 12px; }
+  .header-left { min-width: 0; }
+  .header h1 { font-size: 17px; }
+  .header-sub { font-size: 15px; }
+  .header-right { flex-shrink: 0; }
+}
