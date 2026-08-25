@@ -30,7 +30,7 @@ body {
 .page-wrapper {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 28px 24px 60px;
+  padding: 18px 16px 40px;
 }
 
 /* ===== HEADER ===== */
@@ -96,9 +96,13 @@ body {
 .writing-panel {
   background: white;
   border-radius: 14px;
-  padding: 28px;
+  padding: 20px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
+.panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.panel-heading .panel-label { margin-bottom: 0; }
+.expand-btn { border: 1px solid #e0e4e8; border-radius: 7px; padding: 5px 10px; background: white; color: #555; cursor: pointer; font-size: 11px; }
+.expand-btn:hover { background: #f4f6f8; }
 
 /* ===== TARGET ROW ===== */
 .target-row {
@@ -156,7 +160,7 @@ body {
 }
 textarea {
   width: 100%;
-  height: 280px;
+  height: 420px;
   border: 1.5px solid #e0e4e8;
   border-radius: 10px;
   padding: 16px;
@@ -221,8 +225,8 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 /* ===== BUTTONS ===== */
 .action-row { display: flex; gap: 12px; margin-bottom: 16px; }
 .btn {
-  flex: 1;
-  padding: 13px;
+  flex: 0 1 auto;
+  padding: 9px 16px;
   border: none;
   border-radius: 10px;
   font-size: 14px;
@@ -383,6 +387,10 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 }
 
 .emoji-btn:hover { background: #e9ecef; }
+.frequent-emoji-panel { position: absolute; left: 48px; bottom: 10px; display: flex; gap: 3px; align-items: center; }
+.frequent-emoji-item { width: 27px; height: 30px; border: none; border-radius: 6px; background: #f4f6f8; cursor: pointer; font-size: 15px; }
+.frequent-emoji-item:hover { background: #e9ecef; }
+.writing-panel.expanded textarea { height: 600px; }
 
 .emoji-panel {
   position: absolute;
@@ -422,6 +430,7 @@ body.dark textarea::placeholder, body.dark .target-instructions, body.dark .cont
 body.dark .panel-label, body.dark .char-counter, body.dark .word-counter { color: #aab8b1; }
 body.dark .log-entry { border-color: #34413d; }
 body.dark .log-text, body.dark .checkbox-label, body.dark .card-title { color: #d6e0da; }
+body.dark .expand-btn, body.dark .frequent-emoji-item { background: #24302c; color: #e8efec; border-color: #40504a; }
 body.dark .banner-warn { background: #3a3117; border-color: #8a6d1a; color: #e8d48a; }
 
 @media (max-width: 480px) {
@@ -430,4 +439,9 @@ body.dark .banner-warn { background: #3a3117; border-color: #8a6d1a; color: #e8d
   .header h1 { font-size: 17px; }
   .header-sub { font-size: 15px; }
   .header-right { flex-shrink: 0; }
+  .writing-panel { padding: 16px; }
+  textarea { height: 360px; }
+  .writing-panel.expanded textarea { height: 520px; }
+  .action-row { gap: 8px; }
+  .btn { padding: 9px 12px; font-size: 13px; }
 }
