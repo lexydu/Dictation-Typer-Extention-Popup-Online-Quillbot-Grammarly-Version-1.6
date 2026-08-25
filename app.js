@@ -387,7 +387,7 @@ startBtn.addEventListener('click', async () => {
   let delayRange;
   const speed = speedSelect.value;
    if (speed === 'instant') delayRange = [0, 2];
-   else if (speed === 'superfast') delayRange = [4, 10];
+   else if (speed === 'superfast') delayRange = [2, 4];
   else if (speed === 'fast') delayRange = [8, 10];
   else if (speed === 'normal') delayRange = [50, 200];
    else if (speed === 'slow') delayRange = [100, 400];
