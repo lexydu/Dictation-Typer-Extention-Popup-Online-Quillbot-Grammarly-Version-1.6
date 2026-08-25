@@ -36,7 +36,7 @@
     <div class="main-layout">
 
       <!-- ===== LEFT: WRITING AREA ===== -->
-      <div class="writing-panel">
+       <div class="writing-panel" id="writingPanel">
 
         <!-- Tab Lock -->
         <div class="target-row" id="targetRow">
@@ -49,7 +49,10 @@
           </div>
         </div>
 
-       <div class="panel-label">Your Message</div>
+       <div class="panel-heading">
+         <div class="panel-label">Your Message</div>
+         <button id="expandTextBtn" class="expand-btn" type="button">Expand</button>
+       </div>
 
 <div class="textarea-wrap">
   <textarea
@@ -57,7 +60,9 @@
     placeholder="Write your message here. Quillbot and Grammarly both work on this page — polish your text freely, then click Start Typing."
   ></textarea>
 
-  <button id="emojiBtn" class="emoji-btn" type="button">😊</button>
+   <button id="emojiBtn" class="emoji-btn" type="button">😊</button>
+
+   <div id="frequentEmojiPanel" class="frequent-emoji-panel" aria-label="Frequently used emojis"></div>
 
   <div id="emojiPanel" class="emoji-panel" style="display:none;">
     <button class="emoji-item" type="button">😀</button>
