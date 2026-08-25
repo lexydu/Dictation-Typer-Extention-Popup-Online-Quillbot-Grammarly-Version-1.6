@@ -13,6 +13,7 @@ const STORAGE_TARGET_TAB   = 'dictation_target_tab';
 const STORAGE_SPEED_KEY    = 'dictation_speed';
 const STORAGE_APPEND_KEY   = 'dictation_append_mode';
 const STORAGE_THEME_KEY    = 'dictation_theme';
+const STORAGE_EMOJI_KEY    = 'dictation_frequent_emojis';
 const MAX_CHARS            = 200;
 
 // ===== Element references =====
@@ -55,11 +56,16 @@ const copyAllLogBtn = document.getElementById('copyAllLogBtn');
 const exportRulesBtn = document.getElementById('exportRulesBtn');
 const importRulesBtn = document.getElementById('importRulesBtn');
 const importRulesInput = document.getElementById('importRulesInput');
+const frequentEmojiPanel = document.getElementById('frequentEmojiPanel');
+const expandTextBtn = document.getElementById('expandTextBtn');
+const writingPanel = document.getElementById('writingPanel');
 
 let extensionConnected = false;
 let lastTypedText = '';
 let requestCounter = 0;
 const pendingRequests = {};
+const defaultFrequentEmojis = ['😊', '👍', '❤️', '😂', '🙏', '🔥'];
+let frequentEmojiUsage = {};
 
 // ===== Bridge communication =====
 function sendToExtension(action, data = {}) {
@@ -233,7 +239,7 @@ if (themeBtn) {
 // ===== Load saved state =====
 async function loadSavedState() {
   try {
-    const res = await sendToExtension('storageGet', { keys: [STORAGE_TEXT_KEY, STORAGE_MESSAGES_KEY, STORAGE_LOG_KEY, STORAGE_RULES_KEY, STORAGE_SPEED_KEY, STORAGE_APPEND_KEY, STORAGE_THEME_KEY] });
+    const res = await sendToExtension('storageGet', { keys: [STORAGE_TEXT_KEY, STORAGE_MESSAGES_KEY, STORAGE_LOG_KEY, STORAGE_RULES_KEY, STORAGE_SPEED_KEY, STORAGE_APPEND_KEY, STORAGE_THEME_KEY, STORAGE_EMOJI_KEY] });
     if (res.success && res.data) {
       mainTextEl.value = res.data[STORAGE_TEXT_KEY] || '';
       setMessageCountDisplay(res.data[STORAGE_MESSAGES_KEY] || 0);
@@ -243,6 +249,8 @@ async function loadSavedState() {
       if (res.data[STORAGE_SPEED_KEY]) speedSelect.value = res.data[STORAGE_SPEED_KEY];
       appendMode.checked = res.data[STORAGE_APPEND_KEY] === true;
       applyTheme(res.data[STORAGE_THEME_KEY] || 'light');
+      frequentEmojiUsage = res.data[STORAGE_EMOJI_KEY] || {};
+      renderFrequentEmojis();
       if (mainTextEl.value) showAlert('Draft restored');
     }
     await refreshTargetLabel();
@@ -688,6 +696,7 @@ emojiPanel.addEventListener('click', (e) => {
   if (!e.target.classList.contains('emoji-item')) return;
 
   const emoji = e.target.textContent;
+  recordFrequentEmoji(emoji);
   const start = mainTextEl.selectionStart ?? mainTextEl.value.length;
   const end = mainTextEl.selectionEnd ?? mainTextEl.value.length;
 
@@ -705,6 +714,49 @@ emojiPanel.addEventListener('click', (e) => {
   emojiPanel.style.display = 'none';
   mainTextEl.focus();
 });
+
+function renderFrequentEmojis() {
+  if (!frequentEmojiPanel) return;
+  frequentEmojiPanel.innerHTML = '';
+  const emojis = [...new Set([...defaultFrequentEmojis, ...Object.keys(frequentEmojiUsage)])]
+    .sort((a, b) => (frequentEmojiUsage[b] || 0) - (frequentEmojiUsage[a] || 0))
+    .slice(0, 6);
+  emojis.forEach(emoji => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'frequent-emoji-item';
+    button.textContent = emoji;
+    button.title = 'Insert ' + emoji;
+    button.addEventListener('click', () => insertFrequentEmoji(emoji));
+    frequentEmojiPanel.appendChild(button);
+  });
+}
+
+function insertFrequentEmoji(emoji) {
+  const start = mainTextEl.selectionStart ?? mainTextEl.value.length;
+  const end = mainTextEl.selectionEnd ?? mainTextEl.value.length;
+  const before = mainTextEl.value[start - 1] || '';
+  const after = mainTextEl.value[end] || '';
+  const insertText = (before && !/\s/.test(before) ? ' ' : '') + emoji + (after && !/\s/.test(after) ? ' ' : '');
+  insertAtCursor(mainTextEl, insertText);
+  updateCharCounter();
+  sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: mainTextEl.value } }).catch(() => {});
+  mainTextEl.focus();
+  recordFrequentEmoji(emoji);
+}
+
+function recordFrequentEmoji(emoji) {
+  frequentEmojiUsage[emoji] = (frequentEmojiUsage[emoji] || 0) + 1;
+  renderFrequentEmojis();
+  sendToExtension('storageSet', { data: { [STORAGE_EMOJI_KEY]: frequentEmojiUsage } }).catch(() => {});
+}
+
+if (expandTextBtn && writingPanel) {
+  expandTextBtn.addEventListener('click', () => {
+    const expanded = writingPanel.classList.toggle('expanded');
+    expandTextBtn.textContent = expanded ? 'Collapse' : 'Expand';
+  });
+}
 
 
 document.addEventListener('click', (e) => {
