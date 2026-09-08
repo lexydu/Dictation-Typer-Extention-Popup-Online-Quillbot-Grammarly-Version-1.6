@@ -104,7 +104,6 @@ window.addEventListener('message', (event) => {
     setMessageCountDisplay(msg.count);
     if (lastTypedText) {
       const typedText = lastTypedText;
-      clearTypedMessageBox();
       lastTypedText = '';
       saveToLog(typedText);
     }
