@@ -192,7 +192,7 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
   min-width: 0;
 }
 .char-counter { font-size: 12px; color: #888; font-weight: 500; }
-.word-counter, .save-status { font-size: 12px; color: #888; font-weight: 500; }
+.save-status { font-size: 12px; color: #888; font-weight: 500; }
 .save-status { color: #007946; min-width: 42px; display: inline-block; }
 .link-btn { background: none; border: none; color: #888; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
 .link-btn:hover { color: #333; }
@@ -457,7 +457,7 @@ body.dark .select-input, body.dark .count-input, body.dark .count-btn,
 body.dark .log-copy-btn { background: #24302c; color: #e8efec; border-color: #40504a; }
 body.dark .target-row, body.dark textarea, body.dark .rule-locked { background: #202a27; color: #e8efec; border-color: #40504a; }
 body.dark textarea::placeholder, body.dark .target-instructions, body.dark .control-label,
-body.dark .panel-label, body.dark .char-counter, body.dark .word-counter { color: #aab8b1; }
+body.dark .panel-label, body.dark .char-counter { color: #aab8b1; }
 body.dark .log-entry { border-color: #34413d; }
 body.dark .log-text, body.dark .checkbox-label, body.dark .card-title { color: #d6e0da; }
 body.dark .expand-btn, body.dark .frequent-emoji-item { background: #24302c; color: #e8efec; border-color: #40504a; }
