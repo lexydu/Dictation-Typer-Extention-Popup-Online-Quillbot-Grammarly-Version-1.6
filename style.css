@@ -383,6 +383,23 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
   .main-layout { grid-template-columns: 1fr; }
 }
 .textarea-wrap { position: relative; }
+.editor-bottom-tools {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  z-index: 2;
+}
+.editor-bottom-tools .textarea-meta {
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
 
 .emoji-btn {
   position: absolute;
@@ -399,6 +416,8 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 
 .emoji-btn:hover { background: #e9ecef; }
 .frequent-emoji-panel { position: absolute; left: 48px; bottom: 10px; display: flex; gap: 3px; align-items: center; }
+.editor-bottom-tools .emoji-btn { position: static; flex: 0 0 30px; }
+.editor-bottom-tools .frequent-emoji-panel { position: static; flex: 0 1 auto; min-width: 0; overflow: hidden; }
 .frequent-emoji-item { width: 27px; height: 30px; border: none; border-radius: 6px; background: #f4f6f8; cursor: pointer; font-size: 15px; }
 .frequent-emoji-item:hover { background: #e9ecef; }
 .writing-panel.expanded textarea { height: 600px; }
@@ -428,7 +447,7 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 .emoji-item:hover { background: #f4f6f8; border-radius: 4px; }
 
 /* Prevent overlap with emoji button */
-textarea { padding: 16px 16px 42px 44px; }
+textarea { padding: 16px 16px 42px 16px; }
 
 body.dark { background: #18201e; color: #e8efec; }
 body.dark .header { border-color: #34413d; }
@@ -454,7 +473,8 @@ body.dark .banner-warn { background: #3a3117; border-color: #8a6d1a; color: #e8d
   textarea { height: 360px; }
   .writing-panel.expanded textarea { height: 520px; }
   .textarea-footer { flex-direction: column; align-items: stretch; gap: 8px; }
-  .textarea-meta { width: 100%; justify-content: flex-start; order: 2; }
   .action-buttons { width: 100%; margin-left: 0; gap: 4px; order: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .editor-bottom-tools { left: 8px; right: 8px; gap: 4px; }
+  .editor-bottom-tools .textarea-meta { gap: 6px; margin-left: 4px; }
   .btn { min-width: 0; padding: 7px 6px; font-size: 11px; white-space: nowrap; }
 }
