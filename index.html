@@ -86,7 +86,12 @@
   <span id="charCounter" class="char-counter">0 / 200</span>
   <span id="wordCounter" class="word-counter">0 words</span>
   <span id="saveStatus" class="save-status" aria-live="polite"></span>
-  <button id="clearTextBtn" class="link-btn">Clear text</button>
+  <div class="action-buttons">
+    <button id="stopBtn" class="btn btn-stop" type="button" disabled>■ Stop Typing</button>
+    <button id="pasteTextBtn" class="btn btn-paste" type="button">Paste</button>
+    <button id="startBtn" class="btn btn-start" type="button" disabled>▶ Start Typing</button>
+    <button id="clearTextBtn" class="btn btn-clear" type="button">Clear</button>
+  </div>
 </div>
 
         <!-- Controls -->
@@ -96,8 +101,8 @@
             <select id="speedSelect" class="select-input">
                <option value="instant">Instant</option>
                <option value="superfast" selected>Super Fast</option>
-              <option value="fast">Fast</option>
-              <option value="normal">Normal</option>
+               <option value="fast">Fast</option>
+               <option value="normal">Normal</option>
                <option value="slow">Slow</option>
                <option value="veryslow">Very Slow</option>
             </select>
@@ -108,12 +113,6 @@
               <span>Append instead of overwrite</span>
             </label>
           </div>
-        </div>
-
-        <!-- Action buttons -->
-        <div class="action-row">
-          <button id="startBtn" class="btn btn-start" disabled>▶ Start Typing</button>
-          <button id="stopBtn" class="btn btn-stop" disabled>■ Stop Typing</button>
         </div>
 
         <div id="typingIndicator" class="typing-indicator" style="display:none;">Typing...</div>
