@@ -34,6 +34,7 @@ const increaseBtn      = document.getElementById('increaseBtn');
 const decreaseBtn      = document.getElementById('decreaseBtn');
 const resetBtn         = document.getElementById('resetBtn');
 const clearTextBtn     = document.getElementById('clearTextBtn');
+const pasteTextBtn     = document.getElementById('pasteTextBtn');
 const setTargetBtn     = document.getElementById('setTargetBtn');
 const targetLabelEl    = document.getElementById('targetLabel');
 const toggleRulesBtn   = document.getElementById('toggleRules');
@@ -455,6 +456,15 @@ clearTextBtn.addEventListener('click', async () => {
   updateCharCounter();
   await sendToExtension('storageSet', { data: { [STORAGE_TEXT_KEY]: '' } }).catch(() => {});
   showAlert('✔️ Text cleared!');
+});
+
+pasteTextBtn.addEventListener('click', async () => {
+  try {
+    mainTextEl.value = await navigator.clipboard.readText();
+    mainTextEl.dispatchEvent(new Event('input', { bubbles: true }));
+  } catch (error) {
+    showAlert('⚠️ Clipboard access unavailable.');
+  }
 });
 
 // ===== Counter =====
