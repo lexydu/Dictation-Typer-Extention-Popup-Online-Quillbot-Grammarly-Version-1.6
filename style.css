@@ -223,13 +223,13 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 .checkbox-label input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #007946; }
 
 /* ===== BUTTONS ===== */
-.action-row { display: flex; gap: 12px; margin-bottom: 16px; }
+.action-buttons { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
 .btn {
   flex: 0 1 auto;
-  padding: 9px 16px;
+  padding: 7px 10px;
   border: none;
-  border-radius: 10px;
-  font-size: 14px;
+  border-radius: 7px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, opacity 0.2s;
@@ -239,6 +239,10 @@ textarea::placeholder { color: #b0b8c1; font-size: 14px; line-height: 1.6; }
 .btn-start:hover:not(:disabled) { background: #006038; }
 .btn-stop { background: #b30000; color: white; }
 .btn-stop:hover:not(:disabled) { background: #8c0000; }
+.btn-paste { background: #466b8f; color: white; }
+.btn-paste:hover:not(:disabled) { background: #385873; }
+.btn-clear { background: #68736e; color: white; }
+.btn-clear:hover:not(:disabled) { background: #535d59; }
 
 .typing-indicator {
   font-size: 13px;
@@ -442,6 +446,6 @@ body.dark .banner-warn { background: #3a3117; border-color: #8a6d1a; color: #e8d
   .writing-panel { padding: 16px; }
   textarea { height: 360px; }
   .writing-panel.expanded textarea { height: 520px; }
-  .action-row { gap: 8px; }
-  .btn { padding: 9px 12px; font-size: 13px; }
+  .action-buttons { gap: 8px; }
+  .btn { padding: 7px 10px; font-size: 12px; }
 }
