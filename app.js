@@ -19,7 +19,6 @@ const MAX_CHARS            = 200;
 // ===== Element references =====
 const mainTextEl       = document.getElementById('mainText');
 const charCounterEl    = document.getElementById('charCounter');
-const wordCounterEl    = document.getElementById('wordCounter');
 const saveStatusEl     = document.getElementById('saveStatus');
 const startBtn         = document.getElementById('startBtn');
 const stopBtn          = document.getElementById('stopBtn');
@@ -180,8 +179,6 @@ function updateCharCounter() {
   const len = mainTextEl.value.length;
   charCounterEl.textContent = len + ' / ' + MAX_CHARS;
   charCounterEl.style.color = len > MAX_CHARS ? 'red' : '#888';
-  const words = mainTextEl.value.trim() ? mainTextEl.value.trim().split(/\s+/).length : 0;
-  if (wordCounterEl) wordCounterEl.textContent = words + (words === 1 ? ' word' : ' words');
 }
 
 function showRelockAlert(msg) {
