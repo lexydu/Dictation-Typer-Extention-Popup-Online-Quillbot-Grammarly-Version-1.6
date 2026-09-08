@@ -473,7 +473,8 @@ body.dark .banner-warn { background: #3a3117; border-color: #8a6d1a; color: #e8d
   textarea { height: 360px; }
   .writing-panel.expanded textarea { height: 520px; }
   .textarea-footer { flex-direction: column; align-items: stretch; gap: 8px; }
-  .action-buttons { width: 100%; margin-left: 0; gap: 4px; order: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .action-buttons { width: 100%; margin-left: 0; gap: 4px; order: 1; display: flex; justify-content: flex-start; }
+  .action-buttons .btn { flex: 0 0 auto; }
   .editor-bottom-tools { left: 8px; right: 8px; gap: 4px; }
   .editor-bottom-tools .textarea-meta { gap: 6px; margin-left: 4px; }
   .btn { min-width: 0; padding: 7px 6px; font-size: 11px; white-space: nowrap; }
